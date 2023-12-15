@@ -1,0 +1,9 @@
+{
+  "repos": [
+    {
+      "id": "PartyTap",
+      "organisation": "BitcoinTaps",
+      "repository": "https://github.com/BitcoinTaps/PartyTap"
+    }
+  ]
+}
