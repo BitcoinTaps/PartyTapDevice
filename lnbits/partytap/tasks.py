@@ -154,11 +154,15 @@ async def task_send_switches(device_id: str):
     await websocketUpdater(device_id,json.dumps(message))
     
 async def task_make_lnurlw(payment_request: str,lnurlw: str):
+    logger.info("task_make_lnurlw")
+    
     # validate lnurlw
-    if lnurlw.startswith("lnurlw://"):
+    if not lnurlw.startswith("lnurlw://"):
         logger.error("lnurlw does not start with 'lnurlw://'")
         return
 
+    logger.info(lnurlw)
+    
     # convert lnurlw into https URL
     url = 'https://' + lnurlw[9:]
     logger.info(f"Payment URL: {url}")

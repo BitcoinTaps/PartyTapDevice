@@ -537,7 +537,13 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           configureSwitches(&doc);
         } else if ( event.equals("invoice")) {
           showInvoice(&doc);
-        } else if ( event.equals("paid")) {          
+        } else if ( event.equals("paid")) {     
+          {
+            const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+            lv_label_set_text(ui_LabelMainMessage, "EXECUTING PAYMENT");
+            // lv_timer_handler();    
+          }
+          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);     
           handlePaid(&doc);
         }
       
@@ -771,11 +777,13 @@ void checkNFCPayment() {
   Serial.println("DETECTED NTAG4 424");
   
   uint8_t buffer[512];
-  uint8_t bytesread = nfc.ntag424_ISOReadFile(buffer);
+
+  uint8_t bytesread = nfc.ntag424_ISOReadFile(buffer,512);
   Serial.printf("Bytes read = %d\n",bytesread);
 
   String lnurlw = String((char *)buffer,bytesread);
 
+  Serial.println(lnurlw);
   if ( ! lnurlw.startsWith("lnurlw://")) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -791,7 +799,7 @@ void checkNFCPayment() {
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-    lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
+    lv_label_set_text(ui_LabelMainMessage, "EXECUTING PAYMENT");
     // lv_timer_handler();    
   }
   hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);

@@ -36,7 +36,9 @@ from .crud import (
 )
 from .tasks import (
     task_create_invoice,
-    task_send_switches
+    task_send_switches,
+    task_make_lnurlw
+    
 )
 from .models import CreateLnurldevice
 
@@ -84,9 +86,11 @@ async def websocket_connect(websocket: WebSocket, item_id: str):
             elif jsobj["event"] == "lnurlw":
                 logger.info("Processing LNURLW for payment");
                 for field in ["payment_request","lnurlw"]:
+                    logger.info(jsobj[field])
                     if not field in jsobj:
                         logger.error(f"Required field: '{field}' not present in message")
-                        continue          
+                        continue
+                logger.info("making the call")
                 await task_make_lnurlw(jsobj["payment_request"],jsobj["lnurlw"])
             else:                
                 logger.warning(f"Unknown event type {jsobj['event']} ignored")
