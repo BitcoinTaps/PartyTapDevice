@@ -91,7 +91,7 @@ async def websocket_connect(websocket: WebSocket, item_id: str):
                         logger.error(f"Required field: '{field}' not present in message")
                         continue
                 logger.info("making the call")
-                await task_make_lnurlw(jsobj["payment_request"],jsobj["lnurlw"])
+                await task_make_lnurlw(device.id,jsobj["payment_request"],jsobj["lnurlw"])
             else:                
                 logger.warning(f"Unknown event type {jsobj['event']} ignored")
 

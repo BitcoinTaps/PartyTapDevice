@@ -153,8 +153,13 @@ async def task_send_switches(device_id: str):
 
     await websocketUpdater(device_id,json.dumps(message))
     
-async def task_make_lnurlw(payment_request: str,lnurlw: str):
+async def task_make_lnurlw(device_id: str, payment_request: str,lnurlw: str):
     logger.info("task_make_lnurlw")
+
+    device = await get_device(device_id)
+    if not device:
+        logger.warning("No device found")
+        return
     
     # validate lnurlw
     if not lnurlw.startswith("lnurlw://"):
@@ -181,11 +186,30 @@ async def task_make_lnurlw(payment_request: str,lnurlw: str):
         logger.error("Error in LNURLW response")
         if 'reason' in result:
             logger.error(f"Reason: {result['reason']}")
+
+
+        await websocketUpdater(
+            device_id,
+            json.dumps({
+                "event":"paymentfailed",
+                "pr": payment_request
+            })
+        )
+
         return
     
     for field in ['k1','callback']:
         if not field in result:
             logger.error(f"No {field} in result")
+
+            await websocketUpdater(
+                device_id,
+                json.dumps({
+                    "event":"paymentfailed",
+                    "pr": payment_request
+                })
+            )
+            
             return
     
     # construct callback url
@@ -198,6 +222,15 @@ async def task_make_lnurlw(payment_request: str,lnurlw: str):
             result = response.json()
         except (httpx.ConnectError, httpx.RequestError):
             logger.error("http request failed")
+
+            await websocketUpdater(
+                device_id,
+                json.dumps({
+                    "event":"paymentfailed",
+                    "pr": payment_request
+                })
+            )
+            
             return
 
     # now the websocket should take it over from here

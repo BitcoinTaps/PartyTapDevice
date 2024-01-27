@@ -545,8 +545,13 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           }
           hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);     
           handlePaid(&doc);
-        }
-      
+        } else if ( event.equals("paymentfailed") ) {
+          const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+          lv_label_set_text(ui_LabelMainMessage, "PAYMENT FAILED");
+          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);   
+
+          // go back to about screen  
+        }      
       }
       break;
     case WStype_PING:
@@ -732,7 +737,7 @@ void checkNFCPayment() {
     return;
   }
 
-  success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength,NFC_TIMEOUT);
+  success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, NFC_TIMEOUT);
   if ( ! success ) {
     return;
   }
