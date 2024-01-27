@@ -25,7 +25,6 @@ lv_obj_t * ui_LabelHeaderMain;
 void ui_event_ButtonMainAbout(lv_event_t * e);
 lv_obj_t * ui_ButtonMainAbout;
 lv_obj_t * ui_Label18;
-lv_obj_t * ui_ImageQRCodeBorder;
 lv_obj_t * ui_ScreenPin;
 lv_obj_t * ui_LabelPINValue;
 lv_obj_t * ui_Panel3;
@@ -592,7 +591,7 @@ void ui_ScreenAbout_screen_init(void)
 
     ui_Image1 = lv_img_create(ui_ScreenAbout);
 
-    lv_img_set_src(ui_Image1, &ui_img_kanhetal256_png);  // kan het al logp
+    lv_img_set_src(ui_Image1, &ui_img_bitcointaps256);  // kan het al logp
 
     lv_obj_set_width(ui_Image1, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_Image1, LV_SIZE_CONTENT);    /// 256
@@ -748,23 +747,14 @@ void ui_ScreenMain_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label18, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label18, &ui_font_FontBoucherieBlock24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_ImageQRCodeBorder = lv_img_create(ui_ScreenMain);
-    lv_img_set_src(ui_ImageQRCodeBorder, &ui_img_329557545);
-    lv_obj_set_width(ui_ImageQRCodeBorder, LV_SIZE_CONTENT);   /// 274
-    lv_obj_set_height(ui_ImageQRCodeBorder, LV_SIZE_CONTENT);    /// 274
-    lv_obj_set_x(ui_ImageQRCodeBorder, 5);
-    lv_obj_set_y(ui_ImageQRCodeBorder, -25);
-    lv_obj_set_align(ui_ImageQRCodeBorder, LV_ALIGN_CENTER);
-    lv_obj_add_flag(ui_ImageQRCodeBorder, LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_clear_flag(ui_ImageQRCodeBorder, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
-
     // initialize the QR code
     lv_color_t bg_color = lv_color_hex(0xFFFFFF);
     lv_color_t fg_color = lv_color_hex(0x000000);
     ui_QrcodeLnurl = lv_qrcode_create(ui_ScreenMain,240,fg_color,bg_color);
     lv_obj_center(ui_QrcodeLnurl);
-    lv_obj_set_pos(ui_QrcodeLnurl,-3, -33);
-    lv_obj_set_style_border_width(ui_QrcodeLnurl, 0, 0);
+    lv_obj_set_pos(ui_QrcodeLnurl,0, -30);
+    lv_obj_set_style_border_width(ui_QrcodeLnurl, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_QrcodeLnurl, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(ui_QrcodeLnurl, LV_OBJ_FLAG_HIDDEN);
 
     ui_PanelMainMessage = lv_obj_create(ui_ScreenMain);

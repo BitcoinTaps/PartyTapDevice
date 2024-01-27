@@ -88,7 +88,7 @@
                   icon="cancel"
                   color="pink"
                 >
-                  <q-tooltip> Delete Device </q-tooltip>
+                  <q-tooltip> Delete PartyTap </q-tooltip>
                 </q-btn>
               </q-td>
               <q-td
@@ -98,8 +98,8 @@
                 auto-width
               >
                 <div v-if="col.name == 'id'"></div>
-		<div v-else-if="col.name == 'websocket' && col.value != 0 "><q-btn flat dense size="xs" color="red" icon="favorite"/></div>
-		<div v-else-if="col.name == 'websocket' && col.value == 0 "></div>
+		               <div v-else-if="col.name == 'websocket' && col.value != 0 "><q-btn flat dense size="s" color="green" icon="link"><q-tooltip>Connected</q-tooltip></q-btn></div>
+		<div v-else-if="col.name == 'websocket' && col.value == 0 "><q-btn flat dense size="s" color="red" icon="link_off"><q-tooltip>Disonnected</q-tooltip></q-btn></div>
 		<div v-else>{{ col.value }}</div>
               </q-td>
             </q-tr>
@@ -123,16 +123,10 @@
           BitcoinTaps PartyTap is an LNbits extension enables lightning payments for beertaps. for more information checkout the GitHub <a href="https://github.com/BitcoinTaps/PartyTap" class="text-secondary">repository</a> or the <A href="https://www.bitcointaps.com/PartyTap">Website</a> for instructions on how to build this beertap.
         </p>
         <p>
-          The firmware for the beertap can be flashed right here from within this browser. Connect the PartyTap to your computer and make sure you are viewing this page with the <b>Chrome</b> web browser. Then select the desired version and hit the 'Flash' button. 
+          The firmware for the beertap can be flashed right here from within this browser. Connect the PartyTap to your computer and make sure you are viewing this page with the <b>Chrome</b> web browser and press the 'Flash' button. 
         </p>
         <p>
-          <select class="esp-select-board-type" name="esp-select-board-type">
-            <option value="--">Select your board</option>
-            <option value="ESP32_3248S035C" SELECTED>ESP32_3248S035C (Capacitive touch)</option>
-          </select>
-        </p>
-        <p>
-          <esp-web-install-button>
+          <esp-web-install-button manifest="/partytap/static/firmware/ESP32_3248S035C/manifest.json">
             <button slot="activate">Flash</button>
           </esp-web-install-button>
       	</p>
@@ -381,7 +375,7 @@
     data: function () {
       return {
         tab: 'mails',
-        version: '819591',
+        version: '827652',
         hostname: window.location.host,
         protocol: window.location.protocol,
         location: window.location.hostname,
@@ -695,10 +689,6 @@
     }
   })
 
-  document.querySelector(".esp-select-board-type").addEventListener("change", (event) => {
-    document.querySelector('esp-web-install-button').manifest = `/partytap/static/firmware/${event.target.value}/manifest.json`;
-  });
-    
     
 </script>
 {% endblock %}

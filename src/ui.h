@@ -31,7 +31,6 @@ void ui_event_ButtonMainAbout(lv_event_t * e);
 extern lv_obj_t * ui_ButtonMainAbout;
 extern lv_obj_t * ui_QrcodeLnurl;
 extern lv_obj_t * ui_Label18;
-extern lv_obj_t * ui_ImageQRCodeBorder;
 extern lv_obj_t * ui_ScreenPin;
 extern lv_obj_t * ui_LabelPINValue;
 extern lv_obj_t * ui_Panel3;
@@ -201,7 +200,7 @@ void ButtonAboutConfigClicked(lv_event_t * e);
 void ButtonFreeClicked(lv_event_t * e );
 void ButtonMainBackClicked(lv_event_t * e);
 
-LV_IMG_DECLARE(ui_img_kanhetal256_png);    // kan het al
+LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
 LV_IMG_DECLARE(ui_img_329557545);    // assets/qr-code-slagschaduw-274x274-v2.png
 LV_IMG_DECLARE(ui_img_biertap256_png);    // assets/biertap256.png
 

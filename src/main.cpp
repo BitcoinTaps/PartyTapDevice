@@ -29,6 +29,10 @@ String config_label[PARTYTAP_CFG_MAX_SWITCHES];
 String config_paystr[PARTYTAP_CFG_MAX_SWITCHES];
 int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
 
+/// WebSocket Mutex
+// SemaphoreHandle_t xMutexWebSocket = NULL;
+WebSocketsClient webSocket;
+
 // servo and I2C config
 Adafruit_seesaw seesaw;
 seesaw_Servo seesaw_servo(&seesaw);
@@ -49,8 +53,6 @@ String payment_hash = ""; // the payment hash
 String paymentStateURL = ""; // the URL to retrieve state of the payment
 int tap_duration = 0;  // the duration of the tap
 
-// websocket
-WebSocketsClient webSocket;
 
 // task functions
 void notifyOrderFulfilled();
@@ -60,6 +62,7 @@ void checkNFCPayment();
 void hidePanelMainMessage();
 void expireInvoice();
 void updateBeerTapProgress();
+void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
@@ -137,7 +140,11 @@ void notifyOrderReceived()
   String wsmessage = "{\"event\":\"acknowledged\",\"payment_hash\":\"";
   wsmessage += payment_hash;
   wsmessage += "\"}";
-  webSocket.sendTXT(wsmessage);  
+
+  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
+    webSocket.sendTXT(wsmessage);  
+  //   xSemaphoreGive(xMutexWebSocket);
+  // }
 }
 
 void notifyOrderFulfilled()
@@ -145,7 +152,11 @@ void notifyOrderFulfilled()
   String wsmessage = "{\"event\":\"fulfilled\",\"payment_hash\":\"";
   wsmessage += payment_hash;
   wsmessage += "\"}";
-  webSocket.sendTXT(wsmessage);  
+//   if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
+    webSocket.sendTXT(wsmessage);  
+//     xSemaphoreGive(xMutexWebSocket);
+//   }
+// 
 }
 
 void toConfigPage()
@@ -154,10 +165,13 @@ void toConfigPage()
   if ( bNFCEnabled ) {
     checkNFCPaymentTask.disable();
   }
-  lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_disp_load_scr(ui_ScreenPin);	  
-  lv_timer_handler();      
 
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenPin);	  
+    // lv_timer_handler();      
+  }
 }
 
 void backToAboutPage()
@@ -166,16 +180,20 @@ void backToAboutPage()
   if ( bNFCEnabled ) {
     checkNFCPaymentTask.disable();
   }
-  lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_disp_load_scr(ui_ScreenAbout);	  
-  lv_timer_handler();      
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenAbout);	  
+    // lv_timer_handler();      
+  }
 }
 
 // update the slider of the progress bar while tapping
 void updateBeerTapProgress()
 {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
-  lv_timer_handler();
 
   if (beerTapProgressTask.isLastIteration() ) {
     beerClose();
@@ -187,6 +205,7 @@ void updateBeerTapProgress()
 
 void beerScreen()
 {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 	lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
   lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
@@ -198,10 +217,14 @@ void beerStart()
   notifyOrderReceived();
   beerTapProgressTask.setInterval(tap_duration / TAPPROGRESS_STEPS);
   beerTapProgressTask.restart();
-  lv_bar_set_value(ui_BarBierProgress,0, LV_ANIM_OFF);
-  lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
-  lv_timer_handler();
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_bar_set_value(ui_BarBierProgress,0, LV_ANIM_OFF);
+    lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
+	  lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+    // lv_timer_handler();
+  }
 	beerOpen();    
 }
 
@@ -219,8 +242,11 @@ void setUIStatus(String shortMsg, String longMsg, bool bDisplayQRCode = false) {
   } 
   prevLongMsg = longMsg;
 
-  lv_label_set_text(ui_LabelAboutStatus,shortMsg.c_str());
-  lv_label_set_text(ui_LabelConfigStatus,longMsg.c_str());
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelAboutStatus,shortMsg.c_str());
+    lv_label_set_text(ui_LabelConfigStatus,longMsg.c_str());
+  }
 }
 
 void make_lnurlw_withdraw(String lnurlw) {
@@ -229,26 +255,35 @@ void make_lnurlw_withdraw(String lnurlw) {
   wsmessage += "\",\"lnurlw\":\"";
   wsmessage += lnurlw;
   wsmessage += "\"}";
-  webSocket.sendTXT(wsmessage);  
+  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
+    webSocket.sendTXT(wsmessage);  
+  //   xSemaphoreGive(xMutexWebSocket);
+  // }
 }
 
 void hidePanelAboutMessage()
 {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+
   lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_timer_handler();    
+  // lv_timer_handler();    
 }
 
 void hidePanelMainMessage()
 {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_timer_handler();    
+  // lv_timer_handler();    
 }
 
 void expireInvoice()
 { 
-  lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_disp_load_scr(ui_ScreenAbout);	  
-  lv_timer_handler();  
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenAbout);	  
+    // lv_timer_handler();  
+  }
 
   expireInvoiceTask.disable();
   if ( bNFCEnabled ) {
@@ -270,19 +305,21 @@ void showInvoice(DynamicJsonDocument *doc)
   }
 
   // Update UI
-  lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
-  lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
-  lv_disp_load_scr(ui_ScreenMain);	
-
-  lv_label_set_text(ui_LabelHeaderMain,config_paystr[selectedItem].c_str());
-
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
+    lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenMain);	
+    lv_label_set_text(ui_LabelHeaderMain,config_paystr[selectedItem].c_str());
+  }
 }
 
 void wantBierClicked(int item) {
   Serial.println("wantBierClicked");
 
   if ( config_numswitches == 0 ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_disp_load_scr(ui_ScreenPin);	
     return;
   }
@@ -298,9 +335,16 @@ void wantBierClicked(int item) {
     String wsmessage = "{\"event\":\"createinvoice\",\"switch_id\":\"";
     wsmessage += config_switchid[item];
     wsmessage += "\"}";
-    webSocket.sendTXT(wsmessage.c_str());  
-
-    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+  
+  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
+    webSocket.sendTXT(wsmessage);  
+  //   xSemaphoreGive(xMutexWebSocket);
+  // }
+  
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    }
   }
 }
 
@@ -418,41 +462,44 @@ void configureSwitches(DynamicJsonDocument *doc) {
     // get duration here? 
   }
 
-  switch ( config_numswitches ) {
-    case 0:
-      lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-      break;
-    case 1:
-      lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_set_x(ui_ButtonAboutOne, 0);
-      lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
-      break;
-    case 2:
-      lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_clear_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_set_x(ui_ButtonAboutOne, -60);
-      lv_obj_set_x(ui_ButtonAboutTwo, 60);
-      lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
-      lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
-      break;
-    case 3:
-      lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_clear_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_clear_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-      lv_obj_set_x(ui_ButtonAboutOne, -105);
-      lv_obj_set_x(ui_ButtonAboutTwo, 0);
-      lv_obj_set_x(ui_ButtonAboutThree, 105);
-      lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
-      lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
-      lv_label_set_text(ui_LabelAboutThree, config_label[2].c_str());
-      break;
-    default:
-      break;
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    switch ( config_numswitches ) {
+      case 0:
+        lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+        break;
+      case 1:
+        lv_obj_set_x(ui_ButtonAboutOne, 0);
+        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
+        lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+        break;
+      case 2:
+        lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_x(ui_ButtonAboutOne, -60);
+        lv_obj_set_x(ui_ButtonAboutTwo, 60);
+        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
+        lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
+        break;
+      case 3:
+        lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_x(ui_ButtonAboutOne, -105);
+        lv_obj_set_x(ui_ButtonAboutTwo, 0);
+        lv_obj_set_x(ui_ButtonAboutThree, 105);
+        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
+        lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
+        lv_label_set_text(ui_LabelAboutThree, config_label[2].c_str());
+        break;
+     default:
+        break;
+    }
   }
 
   setUIStatus("Ready to Serve","Ready to Serve");
@@ -460,15 +507,15 @@ void configureSwitches(DynamicJsonDocument *doc) {
 }
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+  
   switch(type) {
-    case WStype_DISCONNECTED:
-      
+    case WStype_DISCONNECTED:      
       if ( WiFi.status() != WL_CONNECTED ) {
+        Serial.println("WebSocket connected");
         setUIStatus("WiFi Disconnected","WiFi Disconnected");
       } else {
         Serial.println("WebSocket disconnected");
         setUIStatus("WebSocket Disconnected","WebSocket Disconnected");
-        lv_timer_handler();
       }      
       break;
     case WStype_CONNECTED:
@@ -480,9 +527,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         DeserializationError error = deserializeJson(doc, (char *)payload);
         if ( error.code() !=  DeserializationError::Ok ) {
           Serial.println("Error in JSON parsing");
-          return;
         }
-
+      
         // get the message type
         String event = doc["event"].as<String>();
         Serial.printf("WS Event type = %s\n",event.c_str());
@@ -494,13 +540,18 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         } else if ( event.equals("paid")) {          
           handlePaid(&doc);
         }
-
+      
       }
       break;
+    case WStype_PING:
+      Serial.println("Received ping");
+      break;
     default:
-      Serial.println("Unknown Websocket error");
+      Serial.printf("Unknown Websocket error: %d\n",type);
 			break;
   }
+
+
 }
 
 
@@ -517,6 +568,8 @@ void setup()
   taskScheduler.addTask(expireInvoiceTask);
   taskScheduler.addTask(backToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
+
+  // xMutexWebSocket = xSemaphoreCreateMutex();  
 
   checkWiFiTask.restartDelayed(1000);
 
@@ -565,8 +618,13 @@ void setup()
   }
 
   beerClose();
-  webSocket.onEvent(webSocketEvent);
+  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
+    webSocket.onEvent(webSocketEvent);
+    webSocket.setReconnectInterval(5000);
+    // xSemaphoreGive(xMutexWebSocket);
+  // }
 
+  
   // initialize NFC reader
   if ( bI2CServo ) {
     nfc.begin();  
@@ -587,14 +645,21 @@ void setup()
 
       // configure board to read RFID tags
       nfc.SAMConfig();
-
-      Serial.println("Waiting for an ISO14443A Card ...");
     }
   }
 
-
   // set label in the About screen
   setUIStatus("Initialized","Initialized");
+
+  xTaskCreatePinnedToCore (
+    loop0,     // Function to implement the task
+    "loop0",   // Name of the task
+    20000,      // Stack size in bytes
+    NULL,      // Task input parameter
+    10,         // Priority of the task
+    NULL,      // Task handle.
+    0          // Core where the task should run
+  );
 
 }
 
@@ -621,7 +686,6 @@ void checkWiFi() {
         setUIStatus("Wi-Fi connected","Wi-Fi connected");
         checkWiFiTask.setInterval(TASK_MINUTE);
         Serial.println("Connecting WebSocket");
-        webSocket.setReconnectInterval(1000);
         String wspath = "/partytap/api/v1/ws/";
         wspath += config_deviceid;
         webSocket.beginSSL(config_lnbitshost, 443, wspath);
@@ -635,6 +699,7 @@ void checkWiFi() {
       break;
     case WL_CONNECTION_LOST:
       Serial.println("CONNECTION LOST");
+      checkWiFiTask.restart();
       break;
     case WL_IDLE_STATUS:
       Serial.println("W_IDLE_STATUS");
@@ -666,31 +731,43 @@ void checkNFCPayment() {
     return;
   }
   
-  lv_label_set_text(ui_LabelMainMessage, "DETECTED NFC TAG");  
-  lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
-  lv_timer_handler();  
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelMainMessage, "DETECTED NFC TAG");  
+    lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
+  }
   Serial.println("DETECTED NFC TAG");
   hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
 
   if ((uidLength != 7) && (uidLength != 4)) {
-    lv_label_set_text(ui_LabelMainMessage, "INCOMPATIBLE CARD");
-    lv_timer_handler();  
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelMainMessage, "INCOMPATIBLE CARD");
+    }
     hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
     return;
   }
   
-  lv_label_set_text(ui_LabelMainMessage, "CORRECT LENGTH");
-  lv_timer_handler();  
-                
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelMainMessage, "CORRECT LENGTH");
+    // lv_timer_handler();  
+  }            
   if (!nfc.ntag424_isNTAG424()) {
-    lv_label_set_text(ui_LabelMainMessage, "GO AWAY!!");
-    lv_timer_handler();  
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelMainMessage, "GO AWAY!!");
+      // lv_timer_handler();  
+    }
     hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
     return;
   }
   
-  lv_label_set_text(ui_LabelMainMessage, "DETECTED NTAG424");
-  lv_timer_handler();  
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelMainMessage, "DETECTED NTAG424");
+    // lv_timer_handler();  
+  }
   Serial.println("DETECTED NTAG4 424");
   
   uint8_t buffer[512];
@@ -700,24 +777,40 @@ void checkNFCPayment() {
   String lnurlw = String((char *)buffer,bytesread);
 
   if ( ! lnurlw.startsWith("lnurlw://")) {
-    lv_label_set_text(ui_LabelMainMessage, "NO LNURLW");
-    lv_timer_handler();  
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelMainMessage, "NO LNURLW");
+      // lv_timer_handler();  
+    }
     hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
     return;
   }
 
   Serial.printf("Received %s from card\n",lnurlw.c_str());
   make_lnurlw_withdraw(lnurlw);
-      
-  lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
-  lv_timer_handler();    
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+    lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
+    // lv_timer_handler();    
+  }
   hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
+
+
+
+}
+
+void loop0(void *parameters) 
+{
+  while ( 1 ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+//    lv_timer_handler();
+    lv_task_handler();
+  }
 }
 
 void loop()
 {
   webSocket.loop();
-  lv_timer_handler();  
   taskScheduler.execute();
-  lv_timer_handler();  
 }
