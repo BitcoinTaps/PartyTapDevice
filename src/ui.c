@@ -677,7 +677,7 @@ void ui_ScreenAbout_screen_init(void)
 
     ui_PanelAboutMessage = lv_obj_create(ui_ScreenAbout);
     lv_obj_set_width(ui_PanelAboutMessage, 240);
-    lv_obj_set_height(ui_PanelAboutMessage, 240);
+    lv_obj_set_height(ui_PanelAboutMessage, 100);
     lv_obj_clear_flag(ui_PanelAboutMessage, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_align(ui_PanelAboutMessage, LV_ALIGN_CENTER);
     lv_obj_set_style_bg_color(ui_PanelAboutMessage, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -690,7 +690,7 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_width(ui_LabelAboutMessage, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelAboutMessage, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_LabelAboutMessage, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_LabelAboutMessage, "FETCHING INVOICE");
+    lv_label_set_text(ui_LabelAboutMessage, "CREATING INVOICE");
     lv_obj_set_style_text_color(ui_LabelAboutMessage, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelAboutMessage, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutMessage, &ui_font_FontBoucherieBlock24, LV_PART_MAIN | LV_STATE_DEFAULT);

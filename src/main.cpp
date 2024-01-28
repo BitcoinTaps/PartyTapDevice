@@ -20,6 +20,7 @@ int config_tap_duration = 5000;
 String config_pin = String(CONFIG_PIN);
 String config_lnbitshost = "";
 String config_deviceid = "";
+String config_wspath = "";
 
 // the switches data
 #define PARTYTAP_CFG_MAX_SWITCHES 3
@@ -313,16 +314,21 @@ void wantBierClicked(int item) {
 
   // send request to create invoice
   if ( webSocket.isConnected() ) {
-    String wsmessage = "{\"event\":\"createinvoice\",\"switch_id\":\"";
-    wsmessage += config_switchid[item];
-    wsmessage += "\"}";
-  
-    webSocket.sendTXT(wsmessage);  
-  
-    {
-      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-      lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-    }
+    Serial.println("WebSocket is connected");
+  } else {
+    Serial.println("WebSocket not connected. Doing nothing");
+    webSocket.beginSSL(config_lnbitshost,443,config_wspath);
+    return;
+  }
+
+  String wsmessage = "{\"event\":\"createinvoice\",\"switch_id\":\"";
+  wsmessage += config_switchid[item];
+  wsmessage += "\"}";
+
+
+  if ( webSocket.sendTXT(wsmessage) ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
   }
 }
 
@@ -400,6 +406,7 @@ void handlePaid(DynamicJsonDocument *doc) {
     Serial.println("Payment Hash not OK");
     return;
   }
+  payment_hash = "";
 
   expireInvoiceTask.disable();
   if ( bNFCEnabled ) {
@@ -489,11 +496,13 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:      
       if ( WiFi.status() != WL_CONNECTED ) {
-        Serial.println("WebSocket connected");
+        Serial.println("Wi-Fi disconnected");
         setUIStatus("WiFi Disconnected","WiFi Disconnected");
+        checkWiFiTask.restart();
       } else {
         Serial.println("WebSocket disconnected");
-        setUIStatus("WebSocket Disconnected","WebSocket Disconnected");
+        setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
+        webSocket.beginSSL(config_lnbitshost,443,config_wspath);
       }      
       break;
     case WStype_CONNECTED:
@@ -528,7 +537,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(ui_LabelMainMessage, "PAYMENT FAILED");
           hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);  
-          checkNFCPaymentTask.restartDelayed(TASK_SECOND * 5); 
+          checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3); 
 
           // go back to about screen  
         }      
@@ -537,6 +546,9 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     case WStype_PING:
       Serial.println("Received ping");
       break;
+    case WStype_PONG:
+      Serial.println("Received pong");
+      break;    
     default:
       Serial.printf("Unknown Websocket error: %d\n",type);
 			break;
@@ -607,7 +619,7 @@ void setup()
   beerClose();
   
   webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(5000);
+  webSocket.setReconnectInterval(1000);
     
   // initialize NFC reader
   if ( bI2CServo ) {
@@ -671,10 +683,17 @@ void checkWiFi() {
         setUIStatus("Wi-Fi connected","Wi-Fi connected");
         checkWiFiTask.setInterval(TASK_MINUTE);
         Serial.println("Connecting WebSocket");
-        String wspath = "/partytap/api/v1/ws/";
-        wspath += config_deviceid;
-        webSocket.beginSSL(config_lnbitshost, 443, wspath);
-      }      
+        config_wspath = "/partytap/api/v1/ws/";
+        config_wspath += config_deviceid;
+        webSocket.beginSSL(config_lnbitshost, 443, config_wspath);
+      }
+      if ( webSocket.isConnected() ) {
+        Serial.println("WebSocket is connected");
+        webSocket.sendPing();
+      } else {
+        Serial.println("WebSocket disconnected, reconnecting");
+        webSocket.beginSSL(config_lnbitshost,443,config_wspath);
+      }
       bConnected = true;
       break;
     case WL_NO_SSID_AVAIL:
