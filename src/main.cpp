@@ -30,7 +30,6 @@ String config_paystr[PARTYTAP_CFG_MAX_SWITCHES];
 int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
 
 /// WebSocket Mutex
-// SemaphoreHandle_t xMutexWebSocket = NULL;
 WebSocketsClient webSocket;
 
 // servo and I2C config
@@ -140,11 +139,7 @@ void notifyOrderReceived()
   String wsmessage = "{\"event\":\"acknowledged\",\"payment_hash\":\"";
   wsmessage += payment_hash;
   wsmessage += "\"}";
-
-  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
-    webSocket.sendTXT(wsmessage);  
-  //   xSemaphoreGive(xMutexWebSocket);
-  // }
+  webSocket.sendTXT(wsmessage);  
 }
 
 void notifyOrderFulfilled()
@@ -152,11 +147,7 @@ void notifyOrderFulfilled()
   String wsmessage = "{\"event\":\"fulfilled\",\"payment_hash\":\"";
   wsmessage += payment_hash;
   wsmessage += "\"}";
-//   if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
-    webSocket.sendTXT(wsmessage);  
-//     xSemaphoreGive(xMutexWebSocket);
-//   }
-// 
+  webSocket.sendTXT(wsmessage);  
 }
 
 void toConfigPage()
@@ -170,7 +161,6 @@ void toConfigPage()
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenPin);	  
-    // lv_timer_handler();      
   }
 }
 
@@ -185,7 +175,6 @@ void backToAboutPage()
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
-    // lv_timer_handler();      
   }
 }
 
@@ -223,7 +212,6 @@ void beerStart()
     lv_bar_set_value(ui_BarBierProgress,0, LV_ANIM_OFF);
     lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
 	  lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
-    // lv_timer_handler();
   }
 	beerOpen();    
 }
@@ -255,25 +243,19 @@ void make_lnurlw_withdraw(String lnurlw) {
   wsmessage += "\",\"lnurlw\":\"";
   wsmessage += lnurlw;
   wsmessage += "\"}";
-  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
-    webSocket.sendTXT(wsmessage);  
-  //   xSemaphoreGive(xMutexWebSocket);
-  // }
+  webSocket.sendTXT(wsmessage);  
 }
 
 void hidePanelAboutMessage()
 {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-
   lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  // lv_timer_handler();    
 }
 
 void hidePanelMainMessage()
 {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
-  // lv_timer_handler();    
 }
 
 void expireInvoice()
@@ -282,7 +264,6 @@ void expireInvoice()
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
-    // lv_timer_handler();  
   }
 
   expireInvoiceTask.disable();
@@ -336,10 +317,7 @@ void wantBierClicked(int item) {
     wsmessage += config_switchid[item];
     wsmessage += "\"}";
   
-  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
     webSocket.sendTXT(wsmessage);  
-  //   xSemaphoreGive(xMutexWebSocket);
-  // }
   
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -540,15 +518,17 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         } else if ( event.equals("paid")) {     
           {
             const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-            lv_label_set_text(ui_LabelMainMessage, "EXECUTING PAYMENT");
-            // lv_timer_handler();    
+            lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
           }
-          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);     
+          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);     
           handlePaid(&doc);
         } else if ( event.equals("paymentfailed") ) {
           const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+          lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(ui_LabelMainMessage, "PAYMENT FAILED");
-          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);   
+          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);  
+          checkNFCPaymentTask.restartDelayed(TASK_SECOND * 5); 
 
           // go back to about screen  
         }      
@@ -579,8 +559,6 @@ void setup()
   taskScheduler.addTask(expireInvoiceTask);
   taskScheduler.addTask(backToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
-
-  // xMutexWebSocket = xSemaphoreCreateMutex();  
 
   checkWiFiTask.restartDelayed(1000);
 
@@ -614,8 +592,6 @@ void setup()
   lv_textarea_set_text(ui_TextAreaConfigDeviceID,config_deviceid.c_str());
   lv_label_set_text(ui_LabelPINValue,"");
 
- 
-
   // connect to servo
   if(!seesaw.begin() ) {
     Serial.println("Seesaw device not detected");
@@ -629,13 +605,10 @@ void setup()
   }
 
   beerClose();
-  // if (xSemaphoreTake (xMutexWebSocket, portMAX_DELAY)) {
-    webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(5000);
-    // xSemaphoreGive(xMutexWebSocket);
-  // }
-
   
+  webSocket.onEvent(webSocketEvent);
+  webSocket.setReconnectInterval(5000);
+    
   // initialize NFC reader
   if ( bI2CServo ) {
     nfc.begin();  
@@ -671,6 +644,7 @@ void setup()
     NULL,      // Task handle.
     0          // Core where the task should run
   );
+
 
 }
 
@@ -737,65 +711,72 @@ void checkNFCPayment() {
     return;
   }
 
+  Serial.println("Check NFC Payment Task");
+
   success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, NFC_TIMEOUT);
   if ( ! success ) {
     return;
   }
-  
+
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelMainMessage, "DETECTED NFC TAG");  
     lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
   }
   Serial.println("DETECTED NFC TAG");
-  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
+  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
 
   if ((uidLength != 7) && (uidLength != 4)) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
       lv_label_set_text(ui_LabelMainMessage, "INCOMPATIBLE CARD");
     }
-    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
+    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
     return;
   }
   
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelMainMessage, "CORRECT LENGTH");
-    // lv_timer_handler();  
   }            
   if (!nfc.ntag424_isNTAG424()) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
       lv_label_set_text(ui_LabelMainMessage, "GO AWAY!!");
-      // lv_timer_handler();  
     }
-    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
+    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
     return;
   }
   
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelMainMessage, "DETECTED NTAG424");
-    // lv_timer_handler();  
   }
+  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
   Serial.println("DETECTED NTAG4 424");
-  
-  uint8_t buffer[512];
 
+  String lnurlw;  
+
+  uint8_t buffer[512];
   uint8_t bytesread = nfc.ntag424_ISOReadFile(buffer,512);
   Serial.printf("Bytes read = %d\n",bytesread);
-
-  String lnurlw = String((char *)buffer,bytesread);
-
+ 
+  if ( bytesread == 0 ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelMainMessage, "MOVE CARD");
+    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
+    return;
+  }
+ 
+  lnurlw = String((char *)buffer,bytesread);
   Serial.println(lnurlw);
+  
   if ( ! lnurlw.startsWith("lnurlw://")) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
       lv_label_set_text(ui_LabelMainMessage, "NO LNURLW");
-      // lv_timer_handler();  
     }
-    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
+    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
     return;
   }
 
@@ -805,25 +786,20 @@ void checkNFCPayment() {
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
     lv_label_set_text(ui_LabelMainMessage, "EXECUTING PAYMENT");
-    // lv_timer_handler();    
   }
-  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 3);
-
-
-
+  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);
 }
 
 void loop0(void *parameters) 
 {
   while ( 1 ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-//    lv_timer_handler();
     lv_task_handler();
   }
 }
 
 void loop()
 {
-  webSocket.loop();
   taskScheduler.execute();
+  webSocket.loop();
 }
