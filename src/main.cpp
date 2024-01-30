@@ -316,15 +316,13 @@ void wantBierClicked(int item) {
   if ( webSocket.isConnected() ) {
     Serial.println("WebSocket is connected");
   } else {
-    Serial.println("WebSocket not connected. Doing nothing");
-    webSocket.beginSSL(config_lnbitshost,443,config_wspath);
+    Serial.println("WebSocket not connected");
     return;
   }
 
   String wsmessage = "{\"event\":\"createinvoice\",\"switch_id\":\"";
   wsmessage += config_switchid[item];
   wsmessage += "\"}";
-
 
   if ( webSocket.sendTXT(wsmessage) ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -492,7 +490,6 @@ void configureSwitches(DynamicJsonDocument *doc) {
 }
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  
   switch(type) {
     case WStype_DISCONNECTED:      
       if ( WiFi.status() != WL_CONNECTED ) {
@@ -502,7 +499,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       } else {
         Serial.println("WebSocket disconnected");
         setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
-        webSocket.beginSSL(config_lnbitshost,443,config_wspath);
       }      
       break;
     case WStype_CONNECTED:
@@ -544,13 +540,10 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       }
       break;
     case WStype_PING:
-      Serial.println("Received ping");
-      break;
     case WStype_PONG:
-      Serial.println("Received pong");
       break;    
     default:
-      Serial.printf("Unknown Websocket error: %d\n",type);
+      Serial.printf("Unknown Websocket message of type: %d\n",type);
 			break;
   }
 
@@ -619,12 +612,15 @@ void setup()
   beerClose();
   
   webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(1000);
+  webSocket.setReconnectInterval(500);
+  webSocket.enableHeartbeat(10000,2000,2);
     
   // initialize NFC reader
   if ( bI2CServo ) {
     nfc.begin();  
+
     uint32_t versiondata = nfc.getFirmwareVersion();
+
     if (!versiondata) {
       bNFCEnabled = false;
       Serial.print("Didn't find PN53x board"); 
@@ -678,21 +674,16 @@ void checkWiFi() {
   wl_status_t status = WiFi.status();
   switch ( status ) {
     case WL_CONNECTED:
-      Serial.println("Wi-Fi Connected");
       if ( bConnected == false ) {
         setUIStatus("Wi-Fi connected","Wi-Fi connected");
-        checkWiFiTask.setInterval(TASK_MINUTE);
+        checkWiFiTask.setInterval(TASK_SECOND * 30);
         Serial.println("Connecting WebSocket");
         config_wspath = "/partytap/api/v1/ws/";
         config_wspath += config_deviceid;
         webSocket.beginSSL(config_lnbitshost, 443, config_wspath);
       }
-      if ( webSocket.isConnected() ) {
-        Serial.println("WebSocket is connected");
-        webSocket.sendPing();
-      } else {
-        Serial.println("WebSocket disconnected, reconnecting");
-        webSocket.beginSSL(config_lnbitshost,443,config_wspath);
+    if (! webSocket.isConnected() ) {
+        Serial.println("WebSocket disconnected");
       }
       bConnected = true;
       break;
