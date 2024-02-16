@@ -1,6 +1,0 @@
-{
-    "name": "BitcoinTaps PartyTap",
-    "short_description": "Enables Bitcoin Lightning enabled (Beer)taps",    
-    "tile": "/partytap/static/image/partytap.png",
-    "contributors": ["pieterjm"]
-}

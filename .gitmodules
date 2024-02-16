@@ -1,0 +1,3 @@
+[submodule "partytap"]
+	path = lnbits
+	url = git@github.com:BitcoinTaps/partytap.git
