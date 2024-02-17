@@ -571,7 +571,7 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_bg_opa(ui_ScreenAbout, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelHeaderAbout = lv_obj_create(ui_ScreenAbout);
-    lv_obj_set_width(ui_PanelHeaderAbout, 320);
+    lv_obj_set_width(ui_PanelHeaderAbout, LCD_WIDTH);
     lv_obj_set_height(ui_PanelHeaderAbout, 50);
     lv_obj_clear_flag(ui_PanelHeaderAbout, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_PanelHeaderAbout, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1774,6 +1774,9 @@ void ui_init(void)
     lv_disp_t * dispp = lv_disp_get_default();
     lv_theme_t * theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                                false, LV_FONT_DEFAULT);
+    //lv_disp_set_rotation(dispp, LV_DISP_ROT_0);
+
+
     lv_disp_set_theme(dispp, theme);
     ui_ScreenAbout_screen_init();
     ui_ScreenMain_screen_init();
