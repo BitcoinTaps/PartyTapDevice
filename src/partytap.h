@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+void doUpdate();
+
 bool checkPIN(const char *pin);
 
 void updatePIN(const char *pin);

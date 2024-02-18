@@ -218,3 +218,7 @@ void ButtonAboutConfigClicked(lv_event_t *e) {
 	entered_pin = "";
 	toConfigPage();
 }
+
+void ButtonConfigFirmwareUpdateClicked(lv_event_t * e) {
+	doUpdate();
+}

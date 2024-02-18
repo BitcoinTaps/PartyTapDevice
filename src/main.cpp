@@ -7,7 +7,8 @@
 #include <ArduinoJson.h>
 #include <WebSocketsClient.h>
 #include <TaskScheduler.h>
-
+#include <HTTPUpdate.h>
+#include <WiFiClientSecure.h>
 
 // config variables
 int config_servo_close = 90;
@@ -65,7 +66,54 @@ Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgre
 #define PARTYTAP_CFG_LNBITSHOST "lnbitshost"
 #define PARTYTAP_CFG_DEVICEID "deviceid"
 #define PARTYTAP_CFG_PIN "pin"
+
+void update_started() {
+  Serial.println("CALLBACK:  HTTP update process started");
+}
+
+void update_finished() {
+  Serial.println("CALLBACK:  HTTP update process finished");
+}
+
+void update_progress(int cur, int total) {
+  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+}
+
+void update_error(int err) {
+  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+}
+
+
+void doUpdate() {
+  webSocket.disableHeartbeat();
+  webSocket.disconnect();
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setTimeout(12000);
+
+  httpUpdate.onStart(update_started);
+  httpUpdate.onEnd(update_finished);
+  httpUpdate.onProgress(update_progress);
+  httpUpdate.onError(update_error);
+
+  t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
   
+  switch (ret) {
+    case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+    }
+}
+
 void beerClose() {
   servo.write(config_servo_close);
 }
@@ -463,6 +511,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         setUIStatus("WiFi Disconnected","WiFi Disconnected");
       } else {
         Serial.println("WebSocket disconnected");
+        checkWiFiTask.setInterval(TASK_SECOND * 5);
         setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
       }      
       break;
