@@ -9,6 +9,9 @@
 #include <TaskScheduler.h>
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
+#include <mutex>
+
+std::recursive_mutex lvgl_mutex;
 
 // config variables
 int config_servo_close = 90;
@@ -32,7 +35,7 @@ int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
 /// WebSocket Mutex
 WebSocketsClient webSocket;
 Servo servo;
-
+bool bDoUpdate = false;
 
 // data related to a payment
 int selectedItem = 0;  // the index of the selected button
@@ -46,9 +49,11 @@ int tap_duration = 0;  // the duration of the tap
 void notifyOrderFulfilled();
 void notifyOrderReceived();
 void checkWiFi();
+void checkUpdate();
 void hidePanelMainMessage();
 void expireInvoice();
 void updateBeerTapProgress();
+void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
@@ -57,6 +62,8 @@ Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
+Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &checkUpdate);
+
 
 // defines for the config file
 #define PARTYTAP_CFG_SSID "ssid"
@@ -85,6 +92,16 @@ void update_error(int err) {
 
 
 void doUpdate() {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  Serial.println("Preparing for update");
+  bDoUpdate = true;
+}
+
+void checkUpdate() {
+  if ( ! bDoUpdate ) {
+    return;
+  }
+
   webSocket.disableHeartbeat();
   webSocket.disconnect();
 
@@ -184,7 +201,7 @@ void toConfigPage()
   expireInvoiceTask.disable();
 
   {
-    //////const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenPin);	  
   }
@@ -195,7 +212,7 @@ void backToAboutPage()
   expireInvoiceTask.disable();
 
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
   }
@@ -204,7 +221,7 @@ void backToAboutPage()
 // update the slider of the progress bar while tapping
 void updateBeerTapProgress()
 {
-  //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
 
   if (beerTapProgressTask.isLastIteration() ) {
@@ -217,7 +234,7 @@ void updateBeerTapProgress()
 
 void beerScreen()
 {
-  //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 	lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
   lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
@@ -231,7 +248,7 @@ void beerStart()
   beerTapProgressTask.restart();
 
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_bar_set_value(ui_BarBierProgress,0, LV_ANIM_OFF);
     lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
 	  lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
@@ -254,7 +271,7 @@ void setUIStatus(String shortMsg, String longMsg, bool bDisplayQRCode = false) {
   prevLongMsg = longMsg;
 
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelAboutStatus,shortMsg.c_str());
     lv_label_set_text(ui_LabelConfigStatus,longMsg.c_str());
   }
@@ -271,20 +288,20 @@ void make_lnurlw_withdraw(String lnurlw) {
 
 void hidePanelAboutMessage()
 {
-  //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
 }
 
 void hidePanelMainMessage()
 {
-  //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
 }
 
 void expireInvoice()
 { 
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
   }
@@ -304,7 +321,7 @@ void showInvoice(DynamicJsonDocument *doc)
 
   // Update UI
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
     lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
     lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
@@ -317,7 +334,7 @@ void wantBierClicked(int item) {
   Serial.println("wantBierClicked");
 
   if ( config_numswitches == 0 ) {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_disp_load_scr(ui_ScreenPin);	
     return;
   }
@@ -342,7 +359,7 @@ void wantBierClicked(int item) {
   wsmessage += "\"}";
 
   if ( webSocket.sendTXT(wsmessage) ) {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
   }
 }
@@ -460,7 +477,7 @@ void configureSwitches(DynamicJsonDocument *doc) {
   }
 
   {
-    //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     switch ( config_numswitches ) {
       case 0:
         lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
@@ -536,14 +553,14 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           showInvoice(&doc);
         } else if ( event.equals("paid")) {     
           {
-            //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+            const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
             lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
             lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
           }
           hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);     
           handlePaid(&doc);
         } else if ( event.equals("paymentfailed") ) {
-          //const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+          const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
           lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
           lv_label_set_text(ui_LabelMainMessage, "PAYMENT FAILED");
           hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);  
@@ -572,12 +589,14 @@ void setup()
 
   // add tasks to task scheduler
   taskScheduler.addTask(checkWiFiTask);
+  taskScheduler.addTask(checkUpdateTask);
   taskScheduler.addTask(hidePanelMainMessageTask);
   taskScheduler.addTask(expireInvoiceTask);
   taskScheduler.addTask(backToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
 
   checkWiFiTask.restartDelayed(1000);
+  checkUpdateTask.restartDelayed(5000);
 
   LittleFS.begin(true);
 
@@ -622,6 +641,17 @@ void setup()
   setUIStatus("Initialized","Initialized");
 
   WiFi.begin(config_wifi_ssid.c_str(),config_wifi_pwd.c_str());
+
+  xTaskCreatePinnedToCore (
+    loop0,     // Function to implement the task
+    "loop0",   // Name of the task
+    20000,      // Stack size in bytes
+    NULL,      // Task input parameter
+    10,         // Priority of the task
+    NULL,      // Task handle.
+    0          // Core where the task should run
+  );
+
 }
 
 
@@ -678,9 +708,17 @@ void checkWiFi() {
 
 }
 
+void loop0(void *parameters) 
+{
+  while ( 1 ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_task_handler();
+  }
+}
+
+
 void loop()
 {
-  lv_task_handler();
   taskScheduler.execute();
   webSocket.loop();
 }
