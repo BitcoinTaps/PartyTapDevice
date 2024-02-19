@@ -209,7 +209,7 @@ LV_IMG_DECLARE(ui_img_biertap256_png);    // assets/biertap256.png
 
 
 // The font was created with the following command
-// lv_font_conv --bpp 1 --size 18 --font Ubuntu-BoldItalic.ttf -o ui_font_UbuntuBoldItalic.c --format lvgl --symbols "ABCDEFGHIBCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$!*.% " --no-prefilter
+// lv_font_conv --bpp 1 --size 18 --font Ubuntu-BoldItalic.ttf -o ui_font_UbuntuBoldItalic.c --format lvgl --symbols 'ABCDEFGHIBCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$!*.% ' --no-prefilter
 // The reference in the header of the result file was replaced by #include "ui.h"
 LV_FONT_DECLARE(ui_font_UbuntuBoldItalic);
 
