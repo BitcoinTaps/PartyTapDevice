@@ -205,12 +205,13 @@ void ButtonFreeClicked(lv_event_t * e );
 void ButtonMainBackClicked(lv_event_t * e);
 
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
-LV_IMG_DECLARE(ui_img_329557545);    // assets/qr-code-slagschaduw-274x274-v2.png
 LV_IMG_DECLARE(ui_img_biertap256_png);    // assets/biertap256.png
 
 
-LV_FONT_DECLARE(ui_font_FontBoucherieBlock24);
-
+// The font was created with the following command
+// lv_font_conv --bpp 1 --size 18 --font Ubuntu-BoldItalic.ttf -o ui_font_UbuntuBoldItalic.c --format lvgl --symbols "ABCDEFGHIBCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$!*.% " --no-prefilter
+// The reference in the header of the result file was replaced by #include "ui.h"
+LV_FONT_DECLARE(ui_font_UbuntuBoldItalic);
 
 void ui_init(void);
 

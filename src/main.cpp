@@ -36,6 +36,7 @@ int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
 WebSocketsClient webSocket;
 Servo servo;
 bool bDoUpdate = false;
+bool bDoReconnect = false;
 
 // data related to a payment
 int selectedItem = 0;  // the index of the selected button
@@ -57,7 +58,7 @@ void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
-Task checkWiFiTask(TASK_SECOND * 10, TASK_FOREVER, &checkWiFi);
+Task checkWiFiTask(TASK_SECOND, TASK_FOREVER, &checkWiFi);
 Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
@@ -74,26 +75,39 @@ Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &checkUpdate);
 #define PARTYTAP_CFG_DEVICEID "deviceid"
 #define PARTYTAP_CFG_PIN "pin"
 
-void update_started() {
-  Serial.println("CALLBACK:  HTTP update process started");
-}
-
 void update_finished() {
-  Serial.println("CALLBACK:  HTTP update process finished");
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  lv_label_set_text(ui_LabelAboutMessage, PSTR("RESTARTING"));
 }
 
 void update_progress(int cur, int total) {
-  Serial.printf("CALLBACK:  HTTP update process at %d of %d bytes...\n", cur, total);
+  char message[25];
+  snprintf_P(message, sizeof(message), PSTR("UPDATE PROGRESS %d%%"), 100 * cur / total);
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelAboutMessage, message);
+  }
 }
 
 void update_error(int err) {
-  Serial.printf("CALLBACK:  HTTP update fatal error code %d\n", err);
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATE FAILURE"));
 }
-
 
 void doUpdate() {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  Serial.println("Preparing for update");
+
+  // disable buttons and move message panel so that it does not cover the logo
+  lv_obj_set_y(ui_PanelAboutMessage, 120);
+  lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATING FIRMWARE"));
+  lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
+  lv_disp_load_scr(ui_ScreenAbout);	  
+  
+
   bDoUpdate = true;
 }
 
@@ -109,26 +123,25 @@ void checkUpdate() {
   client.setInsecure();
   client.setTimeout(12000);
 
-  httpUpdate.onStart(update_started);
+
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
 
   t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
   
-  switch (ret) {
-    case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-        break;
+  // switch (ret) {
+  //   case HTTP_UPDATE_FAILED:
+  //       Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+  //       break;
+  //     case HTTP_UPDATE_NO_UPDATES:
+  //       Serial.println("HTTP_UPDATE_NO_UPDATES");
+  //       break;
 
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
-
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-    }
+  //     case HTTP_UPDATE_OK:
+  //       Serial.println("HTTP_UPDATE_OK");
+  //       break;
+  //   }
 }
 
 void beerClose() {
@@ -140,7 +153,7 @@ void beerOpen() {
 }
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost) {
-  
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   config_wifi_ssid = String(ssid);
   config_wifi_pwd = String(pwd);
   config_deviceid = String(deviceid);
@@ -148,13 +161,7 @@ void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,cons
 
   saveConfig();
 
-  webSocket.disconnect();
-  WiFi.disconnect();
-  WiFi.begin(config_wifi_ssid,config_wifi_pwd);
-
-  checkWiFiTask.setInterval(TASK_SECOND * 1);
-  //checkWiFiTask.restart();
-
+  bDoReconnect = true;
 }
 
 void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration) {
@@ -330,9 +337,8 @@ void showInvoice(DynamicJsonDocument *doc)
   }
 }
 
+// called from LVGL thread
 void wantBierClicked(int item) {
-  Serial.println("wantBierClicked");
-
   if ( config_numswitches == 0 ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_disp_load_scr(ui_ScreenPin);	
@@ -347,10 +353,7 @@ void wantBierClicked(int item) {
   tap_duration = config_duration[selectedItem];
 
   // send request to create invoice
-  if ( webSocket.isConnected() ) {
-    Serial.println("WebSocket is connected");
-  } else {
-    Serial.println("WebSocket not connected");
+  if ( ! webSocket.isConnected() ) {
     return;
   }
 
@@ -360,6 +363,7 @@ void wantBierClicked(int item) {
 
   if ( webSocket.sendTXT(wsmessage) ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelAboutMessage, "CREATING INVOICE");
     lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
   }
 }
@@ -528,7 +532,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         setUIStatus("WiFi Disconnected","WiFi Disconnected");
       } else {
         Serial.println("WebSocket disconnected");
-        checkWiFiTask.setInterval(TASK_SECOND * 5);
         setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
       }      
       break;
@@ -607,7 +610,7 @@ void setup()
 #ifdef BOARD_HAS_RGB_LED
   //smartdisplay_led_set_rgb(0,0,0);
 #endif
-  //smartdisplay_lcd_set_backlight(BB_TFT_INTENSITY);
+  smartdisplay_lcd_set_backlight(BB_TFT_INTENSITY);
   // set UI components from config
   loadConfig();
 
@@ -658,10 +661,16 @@ void setup()
 void checkWiFi() {
   static bool bConnected = false;
 
+  if ( bDoReconnect ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+    bDoReconnect = false;
+    webSocket.disconnect();
+    WiFi.disconnect();
+    WiFi.begin(config_wifi_ssid,config_wifi_pwd);
+  }
 
   if ( checkWiFiTask.isFirstIteration() ) { 
     bConnected = false;
-    checkWiFiTask.setInterval(TASK_SECOND);
   }
 
   wl_status_t status = WiFi.status();
@@ -669,21 +678,16 @@ void checkWiFi() {
     case WL_CONNECTED:
       if ( bConnected == false ) {
         setUIStatus("Wi-Fi connected","Wi-Fi connected");
-        checkWiFiTask.setInterval(TASK_SECOND * 30);
         Serial.println("Connecting WebSocket");
         config_wspath = "/partytap/api/v1/ws/";
         config_wspath += config_deviceid;
         webSocket.beginSSL(config_lnbitshost, 443, config_wspath);
+        bConnected = true;
       }
-      if (! webSocket.isConnected() ) {
-        Serial.println("WebSocket disconnected");
-      }
-      bConnected = true;
       break;
     case WL_NO_SSID_AVAIL:
       Serial.println("ERROR_CONFIG_SSID");
       setUIStatus("SSID not found","SSID not found");
-      checkWiFiTask.setInterval(TASK_MINUTE);
       break;
     case WL_CONNECTION_LOST:
       Serial.println("CONNECTION LOST");
