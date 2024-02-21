@@ -12,28 +12,26 @@
 #include <Wire.h>
 #include <I2CServo.h>
 #include <mutex>
+#include <tapconfig.h>
+#include <tapproduct.h>
 #include <Adafruit_PN532_NTAG424.h>
 
 std::recursive_mutex lvgl_mutex;
 
+#define STR_EMPTY      PSTR("")
+#define STR_INVOICE    PSTR("invoice")
+#define STR_SAT        PSTR("sat")
+#define STR_SWITCHES   PSTR("switches")
+#define STR_RESTARTING PSTR("RESTARTING")
+
 // config variables
-int config_servo_close = 90;
-int config_servo_open = 90;
-String config_wifi_ssid = "";
-String config_wifi_pwd = "";
-int config_tap_duration = 5000;
-String config_pin = String(CONFIG_PIN);
-String config_lnbitshost = "";
-String config_deviceid = "";
-String config_wspath = "";
+TapConfig config ;
+String config_wspath = STR_EMPTY;
 
 // the switches data
-#define PARTYTAP_CFG_MAX_SWITCHES 3
-int config_numswitches = 0;
-String config_switchid[PARTYTAP_CFG_MAX_SWITCHES];
-String config_label[PARTYTAP_CFG_MAX_SWITCHES];
-String config_paystr[PARTYTAP_CFG_MAX_SWITCHES];
-int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
+#define PARTYTAP_CFG_MAX_PRODUCTS 3
+int num_products = 0;
+TapProduct product[PARTYTAP_CFG_MAX_PRODUCTS];
 
 // Sensors and actuators
 Sensact *sensact = NULL;
@@ -46,11 +44,10 @@ bool bDoReconnect = false;
 
 // data related to a payment
 int selectedItem = 0;  // the index of the selected button
-String payment_request = "";  // the payment request
-String payment_hash = ""; // the payment hash
-String paymentStateURL = ""; // the URL to retrieve state of the payment
+String payment_request = STR_EMPTY;  // the payment request
+String payment_hash = STR_EMPTY; // the payment hash
+String paymentStateURL = STR_EMPTY; // the URL to retrieve state of the payment
 int tap_duration = 0;  // the duration of the tap
-
 
 // task functions
 void notifyOrderFulfilled();
@@ -59,6 +56,7 @@ void checkWiFi();
 void checkUpdate();
 void hidePanelMainMessage();
 void expireInvoice();
+void checkNFCPayment();
 void updateBeerTapProgress();
 void loop0(void *parameters);
 
@@ -70,20 +68,20 @@ Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
 Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &checkUpdate);
+Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 
 
-// defines for the config file
-#define PARTYTAP_CFG_SSID "ssid"
-#define PARTYTAP_CFG_WIFIPASS "wifipassword"
-#define PARTYTAP_CFG_SERVO_CLOSE "servoclose"
-#define PARTYTAP_CFG_SERVO_OPEN "servoopen"
-#define PARTYTAP_CFG_LNBITSHOST "lnbitshost"
-#define PARTYTAP_CFG_DEVICEID "deviceid"
-#define PARTYTAP_CFG_PIN "pin"
+
+void setPanelMainMessage(const char *s,int timeout)  {
+  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  lv_label_set_text(ui_LabelMainMessage, s);  
+  lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
+  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
+}
 
 void update_finished() {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_label_set_text(ui_LabelAboutMessage, PSTR("RESTARTING"));
+  lv_label_set_text(ui_LabelAboutMessage, STR_RESTARTING);
 }
 
 void update_progress(int cur, int total) {
@@ -135,10 +133,10 @@ void checkUpdate() {
   httpUpdate.onError(update_error);
 
 #ifdef ESP32_3248S035C
-  t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
+  t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
 #endif
 #ifdef ESP32_4827S043C
-  t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
+  t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_4827S043C/firmware.bin");
 #endif  
 
 
@@ -157,46 +155,41 @@ void checkUpdate() {
 }
 
 void beerClose() {
-  sensact->writeServo(config_servo_close);
+  sensact->writeServo(config.getServoClose());
 }
 
 void beerOpen() {
-  sensact->writeServo(config_servo_open);
+  sensact->writeServo(config.getServoOpen());
 }
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost) {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  config_wifi_ssid = String(ssid);
-  config_wifi_pwd = String(pwd);
-  config_deviceid = String(deviceid);
-  config_lnbitshost = String(lnbitshost);
-
-  config_wifi_ssid = "FRITZ!Box 7590 IP";
-  config_wifi_pwd = "21178618813120341261";
-
-  saveConfig();
+  config.setWiFiSSID(ssid);
+  config.setWiFiPWD(pwd);
+  config.setDeviceID(deviceid);
+  config.setLNbitsHost(lnbitshost);
+  config.save();
 
   bDoReconnect = true;
 }
 
 void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration) {
-  config_servo_close = servoClosed;
-  config_servo_open = servoOpen;
-  config_tap_duration = tapDuration;
-  saveConfig();
+  config.setServoClose(servoClosed);
+  config.setServoOpen(servoOpen);
+  config.setTapDuration(tapDuration);
+  config.save();
 }
 
 void updatePIN(const char *pin) {
-  config_pin = String(pin);
-  saveConfig();
+  config.setPIN(pin);
+  config.save();
 }
-
   
 bool checkPIN(const char *pin) {
   if ( pin == NULL ) {
     return false;
   }
-  if ( String(pin).equals(config_pin) ) {
+  if ( strcmp(pin,config.getPIN()) == 0 ) {
     return true;
   }
   return false;
@@ -204,23 +197,26 @@ bool checkPIN(const char *pin) {
 
 void notifyOrderReceived()
 {
-  String wsmessage = "{\"event\":\"acknowledged\",\"payment_hash\":\"";
+  String wsmessage = PSTR("{\"event\":\"acknowledged\",\"payment_hash\":\"");
   wsmessage += payment_hash;
-  wsmessage += "\"}";
+  wsmessage += PSTR("\"}");
   webSocket.sendTXT(wsmessage);  
 }
 
 void notifyOrderFulfilled()
 {
-  String wsmessage = "{\"event\":\"fulfilled\",\"payment_hash\":\"";
+  String wsmessage = PSTR("{\"event\":\"fulfilled\",\"payment_hash\":\"");
   wsmessage += payment_hash;
-  wsmessage += "\"}";
+  wsmessage += PSTR("\"}");
   webSocket.sendTXT(wsmessage);  
 }
 
 void toConfigPage()
 {
   expireInvoiceTask.disable();
+  if ( sensact->isNFCAvailable() ) {
+    checkNFCPaymentTask.disable();
+  }
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -232,6 +228,9 @@ void toConfigPage()
 void backToAboutPage()
 {
   expireInvoiceTask.disable();
+  if ( sensact->isNFCAvailable() ) {
+    checkNFCPaymentTask.disable();
+  }
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -280,31 +279,31 @@ void beerStart()
 
 void freeBeerClicked()
 {
-  tap_duration = config_tap_duration;
+  tap_duration = config.getTapDuration();
   beerScreen();
 }
 
-void setUIStatus(String shortMsg, String longMsg, bool bDisplayQRCode = false) {
-  static String prevLongMsg = "";
-
-  if ( prevLongMsg.equals(longMsg) ) {
+void setUIStatus(const char *shortMsg, const char *longMsg, bool bDisplayQRCode = false) {
+  static char prevLongMsg[50] = STR_EMPTY;
+  
+  if ( strcmp(prevLongMsg,longMsg) == 0 ) {
     return;
   } 
-  prevLongMsg = longMsg;
+  strncpy(prevLongMsg,longMsg,min(strlen(longMsg),strlen(prevLongMsg)));
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelAboutStatus,shortMsg.c_str());
-    lv_label_set_text(ui_LabelConfigStatus,longMsg.c_str());
+    lv_label_set_text(ui_LabelAboutStatus,shortMsg);
+    lv_label_set_text(ui_LabelConfigStatus,longMsg);
   }
 }
 
-void make_lnurlw_withdraw(String lnurlw) {
-  String wsmessage = "{\"event\":\"lnurlw\",\"payment_request\":\""; 
+void make_lnurlw_withdraw(const char *lnurlw) {
+  String wsmessage = PSTR("{\"event\":\"lnurlw\",\"payment_request\":\""); 
   wsmessage += payment_request;
-  wsmessage += "\",\"lnurlw\":\"";
+  wsmessage += PSTR("\",\"lnurlw\":\"");
   wsmessage += lnurlw;
-  wsmessage += "\"}";
+  wsmessage += PSTR("\"}");
   webSocket.sendTXT(wsmessage);  
 }
 
@@ -329,18 +328,24 @@ void expireInvoice()
   }
 
   expireInvoiceTask.disable();
-  payment_hash = "";
-  payment_request = "";  
+  if ( sensact->isNFCAvailable() ) {
+    checkNFCPaymentTask.disable();
+  }
+
+  payment_hash = STR_EMPTY;
+  payment_request = STR_EMPTY;  
 }
 
 void showInvoice(DynamicJsonDocument *doc)
 {
-  payment_request = (*doc)["pr"].as<String>();
-  payment_hash = (*doc)["payment_hash"].as<String>();
+  payment_request = (*doc)["pr"].as<const char *>();
+  payment_hash = (*doc)["payment_hash"].as<const char *>();
 
   // Start countdown to expire invoice
   expireInvoiceTask.restartDelayed(TASK_SECOND * 60);
-
+  if ( sensact->isNFCAvailable() ) {
+    checkNFCPaymentTask.restart();
+  }
   // Update UI
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -348,13 +353,13 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
     lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenMain);	
-    lv_label_set_text(ui_LabelHeaderMain,config_paystr[selectedItem].c_str());
+    lv_label_set_text(ui_LabelHeaderMain,product[selectedItem].getPayString());
   }
 }
 
 // called from LVGL thread
 void wantBierClicked(int item) {
-  if ( config_numswitches == 0 ) {
+  if ( num_products == 0 ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_disp_load_scr(ui_ScreenPin);	
     return;
@@ -362,23 +367,23 @@ void wantBierClicked(int item) {
 
   // reset all parameters
   selectedItem = item;
-  payment_hash = "";
-  payment_request = "";
+  payment_hash = STR_EMPTY;
+  payment_request = STR_EMPTY;
   // set tap duration to default
-  tap_duration = config_duration[selectedItem];
-
+  tap_duration = product[selectedItem].getTapDuration();
+  
   // send request to create invoice
   if ( ! webSocket.isConnected() ) {
     return;
   }
 
-  String wsmessage = "{\"event\":\"createinvoice\",\"switch_id\":\"";
-  wsmessage += config_switchid[item];
-  wsmessage += "\"}";
+  String wsmessage = PSTR("{\"event\":\"createinvoice\",\"switch_id\":\"");
+  wsmessage += product[selectedItem].getSwitchID();
+  wsmessage += PSTR("\"}");
 
   if ( webSocket.sendTXT(wsmessage) ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelAboutMessage, "CREATING INVOICE");
+    lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
     lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
   }
 }
@@ -388,116 +393,56 @@ void myDelay(uint32_t ms) {
   delay(ms);
 }
 
-void loadConfig() {
-  File file = LittleFS.open("/config.json", "r");
-  if (file) {
-
-    String content = file.readString();
-    DynamicJsonDocument doc(2048);
-    DeserializationError error = deserializeJson(doc, content);
-    file.close();
-
-    if ( error.code() ==  DeserializationError::Ok ) {
-
-      JsonArray arr = doc.as<JsonArray>();
-      for (JsonObject obj: arr) {
-        String name = obj["name"];
-        String value = obj["value"];
-
-        if ( name == PARTYTAP_CFG_SSID ) {
-          config_wifi_ssid = String(value);
-        } else if ( name == PARTYTAP_CFG_WIFIPASS ) {
-          config_wifi_pwd = String(value);
-        } else if ( name == PARTYTAP_CFG_SERVO_CLOSE ) {
-          config_servo_close = String(value).toInt();
-        } else if ( name == PARTYTAP_CFG_SERVO_OPEN ) {
-          config_servo_open = String(value).toInt();
-        } else if ( name == PARTYTAP_CFG_LNBITSHOST ) {
-          config_lnbitshost = String(value);     
-        } else if (name == PARTYTAP_CFG_PIN ) {
-          config_pin = String(value);
-        } else if ( name == PARTYTAP_CFG_DEVICEID ) {
-          config_deviceid = String(value);
-        }
-      }
-    }
-  }
-}
-
-void saveConfig() {
-  File file = LittleFS.open("/config.json", "w");
-  if (!file) {
-    return;
-  }
-
-  DynamicJsonDocument doc(2048);
-  doc[0]["name"] = PARTYTAP_CFG_SSID;
-  doc[0]["value"] = config_wifi_ssid;    
-  doc[1]["name"] = PARTYTAP_CFG_WIFIPASS;
-  doc[1]["value"]= config_wifi_pwd;
-  doc[2]["name"] = PARTYTAP_CFG_SERVO_CLOSE;
-  doc[2]["value"] = config_servo_close;
-  doc[3]["name"] = PARTYTAP_CFG_SERVO_OPEN;
-  doc[3]["value"] = config_servo_open;
-  doc[4]["name"] = PARTYTAP_CFG_LNBITSHOST;
-  doc[4]["value"] = config_lnbitshost;
-  doc[5]["name"] = PARTYTAP_CFG_PIN;
-  doc[5]["value"] = config_pin;
-  doc[6]["name"] = PARTYTAP_CFG_DEVICEID;
-  doc[6]["value"] = config_deviceid;
-
-  String output = "";
-  serializeJson(doc, output);
-  serializeJson(doc, file);
-  file.close();
-}
 
 void handlePaid(DynamicJsonDocument *doc) {
-  if ( ! (*doc)["payment_hash"].as<String>().equals(payment_hash) ) {
+  const char *phash = (*doc)["payment_hash"].as<const char *>();
+
+  if ( strcmp(phash,payment_hash.c_str()) != 0 ) {
+#ifdef DEBUG
     Serial.println("Payment Hash not OK");
+#endif
     return;
   }
-  payment_hash = "";
+  payment_hash = STR_EMPTY;
 
   expireInvoiceTask.disable();
-  tap_duration = (*doc)["payload"].as<String>().toInt();
+  if ( sensact->isNFCAvailable() ) {
+    checkNFCPaymentTask.disable();
+  }
+
+  tap_duration = (*doc)["payload"].as<int>();
   beerScreen();
 }
 
 
 void configureSwitches(DynamicJsonDocument *doc) {
-  char charValue[100];
+  char charValue[30];
 
   // clear current switches
-  config_numswitches = 0;
+  num_products = 0;
   
   // bewaar opties in een keuzelijstje
   JsonArray switches = (*doc)["switches"].as<JsonArray>();
-  config_numswitches = switches.size() < PARTYTAP_CFG_MAX_SWITCHES ? switches.size() : PARTYTAP_CFG_MAX_SWITCHES;
-  for (int i=0;i < config_numswitches;i++) {
+  num_products = switches.size() < PARTYTAP_CFG_MAX_PRODUCTS ? switches.size() : PARTYTAP_CFG_MAX_PRODUCTS;
+  for (int i=0;i < num_products;i++) {
     JsonObject obj = switches[i];
-    config_switchid[i] = obj["id"].as<String>();
-    config_label[i] = obj["label"].as<String>();
-    config_duration[i] = obj["duration"].as<int>();
+    product[i].setSwitchID(obj["id"].as<const char *>());
+    product[i].setLabel(obj["label"].as<const char *>());
+    product[i].setTapDuration(obj["duration"].as<int>());
 
     float amount = obj["amount"].as<float>();    
-    String currency = obj["currency"].as<String>();
-    if ( currency.equals("sat") ) { 
-      sprintf(charValue,"PAY %.0f %s",amount,currency.c_str());
+    const char *currency = obj["currency"].as<const char *>();
+    if ( strcmp(currency,"sat") == 0 ) { 
+      snprintf_P(charValue,sizeof(charValue),PSTR("PAY %.0f %s"),amount,currency);    
     } else {
-      sprintf(charValue,"PAY %.2f %s",amount,currency.c_str());
+      snprintf_P(charValue,sizeof(charValue),PSTR("PAY %.2f %s"),amount,currency);
     }
-    config_paystr[i] = charValue;
-
-    config_label[i].toUpperCase();
-    config_paystr[i].toUpperCase();
-
-    // get duration here? 
+    product[i].setPayString(charValue);
   }
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    switch ( config_numswitches ) {
+    switch ( num_products ) {
       case 0:
         lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
@@ -505,7 +450,7 @@ void configureSwitches(DynamicJsonDocument *doc) {
         break;
       case 1:
         lv_obj_set_x(ui_ButtonAboutOne, 0);
-        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
+        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
@@ -516,8 +461,8 @@ void configureSwitches(DynamicJsonDocument *doc) {
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_x(ui_ButtonAboutOne, -60);
         lv_obj_set_x(ui_ButtonAboutTwo, 60);
-        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
-        lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
+        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
+        lv_label_set_text(ui_LabelAboutTwo, product[1].getLabel());
         break;
       case 3:
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
@@ -526,16 +471,16 @@ void configureSwitches(DynamicJsonDocument *doc) {
         lv_obj_set_x(ui_ButtonAboutOne, -105);
         lv_obj_set_x(ui_ButtonAboutTwo, 0);
         lv_obj_set_x(ui_ButtonAboutThree, 105);
-        lv_label_set_text(ui_LabelAboutOne, config_label[0].c_str());
-        lv_label_set_text(ui_LabelAboutTwo, config_label[1].c_str());
-        lv_label_set_text(ui_LabelAboutThree, config_label[2].c_str());
+        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
+        lv_label_set_text(ui_LabelAboutTwo, product[1].getLabel());
+        lv_label_set_text(ui_LabelAboutThree, product[2].getLabel());
         break;
      default:
         break;
     }
   }
 
-  setUIStatus("Ready to Serve","Ready to Serve");
+  setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve"));
 
 }
 
@@ -543,10 +488,14 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:      
       if ( WiFi.status() != WL_CONNECTED ) {
+#ifdef DEBUG
         Serial.println("Wi-Fi disconnected");
-        setUIStatus("WiFi Disconnected","WiFi Disconnected");
+#endif
+        setUIStatus(PSTR("WiFi Disconnected"),PSTR("WiFi Disconnected"));
       } else {
+#ifdef DEBUG
         Serial.println("WebSocket disconnected");
+#endif
         setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
       }      
       break;
@@ -557,33 +506,27 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       {
         DynamicJsonDocument doc(2000);
         DeserializationError error = deserializeJson(doc, (char *)payload);
+#ifdef DEBUG
         if ( error.code() !=  DeserializationError::Ok ) {
           Serial.println("Error in JSON parsing");
+          return;
         }
-      
+#endif      
         // get the message type
-        String event = doc["event"].as<String>();
+        const char *event = doc["event"].as<const char *>();
+#ifdef DEBUG
         Serial.printf("WS Event type = %s\n",event.c_str());
-
-        if ( event.equals("switches")) {
+#endif
+        if ( strcmp(event,STR_SWITCHES) == 0 ) {
           configureSwitches(&doc);
-        } else if ( event.equals("invoice")) {
+        } else if ( strcmp(event,STR_INVOICE) == 0 ) {
           showInvoice(&doc);
-        } else if ( event.equals("paid")) {     
-          {
-            const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-            lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
-            lv_label_set_text(ui_LabelMainMessage, "PAYMENT SUCCES");
-          }
-          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);     
+        } else if ( strcmp(event,"paid") == 0 ) {     
+          setPanelMainMessage(PSTR("PAYMENT SUCCES"),5);
           handlePaid(&doc);
-        } else if ( event.equals("paymentfailed") ) {
-          const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-          lv_obj_clear_flag(ui_LabelMainMessage,LV_OBJ_FLAG_HIDDEN);
-          lv_label_set_text(ui_LabelMainMessage, "PAYMENT FAILED");
-          hidePanelMainMessageTask.restartDelayed(TASK_SECOND * 5);  
-
-          // go back to about screen  
+        } else if ( strcmp(event,"paymentfailed") == 0 ) {
+          setPanelMainMessage("PAYMENT FAILED",5);
+          checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3);  
         }      
       }
       break;
@@ -591,11 +534,64 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     case WStype_PONG:
       break;    
     default:
+#ifdef DEBUG
       Serial.printf("Unknown Websocket message of type: %d\n",type);
+#endif
 			break;
   }
 
 
+}
+
+
+
+void nfcReadCallback(int statusCode ) {
+#ifdef DEBUG
+  Serial.printf("NFC read status %d\n",statusCode);
+#endif
+  switch ( statusCode ) {
+    case SENSACT_NFC_CB_INCOMPATIBLE:
+      setPanelMainMessage("INCOMPATIBLE CARD",5);
+      break;
+    case SENSACT_NFC_CB_NO_BYTES:
+      setPanelMainMessage("MOVE CARD",5);
+      break;
+    case SENSACT_NFC_CB_NO_NTAG424:
+      setPanelMainMessage("BAD CARD",5);
+      break;  
+    case SENSACT_NFC_CB_NOREAD:
+      // this is normal 
+      break;
+    case SENSACT_NFC_CB_UNAVAILABLE:
+      setPanelMainMessage("NFC UNAVAILABLE",5);
+      break;    
+    case SENSACT_NFC_CB_READ_SUCCESS:
+      setPanelMainMessage("READ SUCCES",5);
+      break;
+  }
+}
+
+void nfcReadSucces(int len,const char *data ) {
+  if ( strncmp("lnurlw://",data,9) != 0 ) {
+#ifdef DEBUG
+    Serial.println("this is not an LNURLW");
+#endif
+    return;
+  }
+
+#ifdef DEBUG
+  Serial.printf("NFC read succes %d\n",len);
+#endif
+
+  String wsmessage = "{\"event\":\"lnurlw\",\"payment_request\":\"";
+  wsmessage += payment_request;
+  wsmessage += "\",\"lnurlw\":\"";
+  wsmessage += data;
+  wsmessage += "\"}";
+#ifdef DEBUG
+  Serial.println(wsmessage);
+#endif
+  webSocket.sendTXT(wsmessage);
 }
 
 
@@ -607,41 +603,42 @@ void setup()
 
   // add tasks to task scheduler
   taskScheduler.addTask(checkWiFiTask);
+  taskScheduler.addTask(checkNFCPaymentTask);
   taskScheduler.addTask(checkUpdateTask);
   taskScheduler.addTask(hidePanelMainMessageTask);
   taskScheduler.addTask(expireInvoiceTask);
   taskScheduler.addTask(backToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
 
-
+  // init filesystem and load config
   LittleFS.begin(true);
+  config.load();
 
   smartdisplay_init();
   ui_init();
 
 #ifdef BOARD_HAS_RGB_LED
-  //smartdisplay_led_set_rgb(0,0,0);
+  smartdisplay_led_set_rgb(0,0,0);
 #endif
   smartdisplay_lcd_set_backlight(BB_TFT_INTENSITY);
   // set UI components from config
-  loadConfig();
 
   // set the values of the sliders
-  lv_slider_set_value(ui_SliderConfigServoClosed,config_servo_close,LV_ANIM_OFF);
-  lv_slider_set_value(ui_SliderConfigServoOpen,config_servo_open,LV_ANIM_OFF);
-  lv_slider_set_value(ui_SliderConfigTapDuration,config_tap_duration,LV_ANIM_OFF);
+  lv_slider_set_value(ui_SliderConfigServoClosed,config.getServoClose(),LV_ANIM_OFF);
+  lv_slider_set_value(ui_SliderConfigServoOpen,config.getServoOpen(),LV_ANIM_OFF);
+  lv_slider_set_value(ui_SliderConfigTapDuration,config.getTapDuration(),LV_ANIM_OFF);
   
   // set the current values of the labels
-  lv_label_set_text_fmt(ui_LabelConfigServoClosed,"%d",config_servo_close);
-  lv_label_set_text_fmt(ui_LabelConfigServoOpen,"%d",config_servo_open);
-  lv_label_set_text_fmt(ui_LabelConfigTapDuration,"%d",config_tap_duration);
+  lv_label_set_text_fmt(ui_LabelConfigServoClosed,"%d",config.getServoClose());
+  lv_label_set_text_fmt(ui_LabelConfigServoOpen,"%d",config.getServoOpen());
+  lv_label_set_text_fmt(ui_LabelConfigTapDuration,"%d",config.getTapDuration());
 
   // set wifi configuration and device id
-  lv_textarea_set_text(ui_TextAreaConfigSSID,config_wifi_ssid.c_str());
-  lv_textarea_set_text(ui_TextAreaWifiPassword,config_wifi_pwd.c_str());
-  lv_textarea_set_text(ui_TextAreaConfigHost,config_lnbitshost.c_str());
-  lv_textarea_set_text(ui_TextAreaConfigDeviceID,config_deviceid.c_str());
-  lv_label_set_text(ui_LabelPINValue,"");
+  lv_textarea_set_text(ui_TextAreaConfigSSID,config.getWiFiSSID());
+  lv_textarea_set_text(ui_TextAreaWifiPassword,config.getWiFiPWD());
+  lv_textarea_set_text(ui_TextAreaConfigHost,config.getLNbitsHost());
+  lv_textarea_set_text(ui_TextAreaConfigDeviceID,config.getDeviceID());
+  lv_label_set_text(ui_LabelPINValue,STR_EMPTY);
 
   xTaskCreatePinnedToCore (
     loop0,     // Function to implement the task
@@ -681,13 +678,13 @@ void setup()
 #endif
 
   if (( sensact->isNFCAvailable()) && (sensact->isServoAvailable() )) {
-    setUIStatus("NFC and TAP available","NFC and TAP available");
+    setUIStatus("Initialized with NFC","Initialized with NFC");
   } else if ( sensact->isServoAvailable() ) {
-    setUIStatus("TAP available","TAP available");   
+    setUIStatus("Initialized","Initialized");   
   } else if ( sensact->isNFCAvailable() ) {
-    setUIStatus("NFC available, no TAP!","NFC available, no TAP!");   
+    setUIStatus("Initialization failed","Initialization failed. NFC is available, no tap control");
   } else {
-    setUIStatus("no NFC and no TAP!","no NFC and no TAP!");   
+    setUIStatus("Initialization failed","Initialization failed. NFC unavailable, Tap unavailable");
   }
   
   beerClose();
@@ -697,18 +694,15 @@ void setup()
   webSocket.enableHeartbeat(10000,2000,2);
     
 
-  // set label in the About screen
-  setUIStatus("Initialized","Initialized");
-
   checkWiFiTask.restartDelayed(1000);
   checkUpdateTask.restartDelayed(5000);
 
-  WiFi.begin(config_wifi_ssid.c_str(),config_wifi_pwd.c_str());
-
-
-
+  WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
 }
 
+void checkNFCPayment() {
+  sensact->readNFC(NFC_TIMEOUT,nfcReadCallback,nfcReadSucces);
+}
 
 void checkWiFi() {
   static bool bConnected = false;
@@ -718,7 +712,7 @@ void checkWiFi() {
     bDoReconnect = false;
     webSocket.disconnect();
     WiFi.disconnect();
-    WiFi.begin(config_wifi_ssid,config_wifi_pwd);
+    WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
   }
 
   if ( checkWiFiTask.isFirstIteration() ) { 
@@ -730,34 +724,50 @@ void checkWiFi() {
     case WL_CONNECTED:
       if ( bConnected == false ) {
         setUIStatus("Wi-Fi connected","Wi-Fi connected");
+#ifdef DEBUG
         Serial.println("Connecting WebSocket");
+#endif
         config_wspath = "/partytap/api/v1/ws/";
-        config_wspath += config_deviceid;
-        webSocket.beginSSL(config_lnbitshost, 443, config_wspath);
+        config_wspath += config.getDeviceID();
+        webSocket.beginSSL(config.getLNbitsHost(), 443, config_wspath);
         bConnected = true;
       }
       break;
     case WL_NO_SSID_AVAIL:
+#ifdef DEBUG
       Serial.println("ERROR_CONFIG_SSID");
+#endif
       setUIStatus("SSID not found","SSID not found");
       break;
     case WL_CONNECTION_LOST:
+#ifdef DEBUG
       Serial.println("CONNECTION LOST");
+#endif
       break;
     case WL_IDLE_STATUS:
+#ifdef DEBUG
       Serial.println("W_IDLE_STATUS");
+#endif
       break;
     case WL_DISCONNECTED:
+#ifdef DEBUG
       Serial.println("WL_DISCONNECTED");
+#endif
       break;
     case WL_NO_SHIELD:
+#ifdef DEBUG
       Serial.println("Wi-Fi device not initialized");
+#endif
       break;
     case WL_CONNECT_FAILED:
+#ifdef DEBUG
       Serial.println("WL_CONNECT_FAILED");
+#endif
       break;
     default:
+#ifdef DEBUG
       Serial.printf("Unknown WiFi state %d\n",status);
+#endif
       break;
     }
 

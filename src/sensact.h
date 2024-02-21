@@ -7,6 +7,13 @@
 #include <Wire.h>
 #include <ESP32Servo.h>
 
+#define SENSACT_NFC_CB_UNAVAILABLE  0
+#define SENSACT_NFC_CB_NOREAD       1
+#define SENSACT_NFC_CB_INCOMPATIBLE 2
+#define SENSACT_NFC_CB_NO_NTAG424   3
+#define SENSACT_NFC_CB_NO_BYTES     4
+#define SENSACT_NFC_CB_READ_SUCCESS 5
+
 class Sensact {
     private:
         int _sda = -1;
@@ -20,6 +27,8 @@ class Sensact {
 
         // NFC device is through I2C
         Adafruit_PN532 *pn532 = NULL;
+        uint8_t nfcbuffer[512];
+
 
         // scan if an I2C address is alive
         bool scanI2CAddress(int address);
@@ -41,6 +50,9 @@ class Sensact {
 
         // return true when NFC is available
         bool isNFCAvailable();
+        
+        // read an NFC card
+        bool readNFC(int timeout,void (*cb)(int),void (*result)(int,const char *));
 
         // initialize a regular servo
         bool initServo(int pin);
