@@ -2,14 +2,17 @@
 #include <esp32_smartdisplay.h>
 #include "partytap.h"
 #include "ui.h"
-#include <ESP32Servo.h>
+#include <sensact.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <WebSocketsClient.h>
 #include <TaskScheduler.h>
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
+#include <Wire.h>
+#include <I2CServo.h>
 #include <mutex>
+#include <Adafruit_PN532_NTAG424.h>
 
 std::recursive_mutex lvgl_mutex;
 
@@ -32,9 +35,12 @@ String config_label[PARTYTAP_CFG_MAX_SWITCHES];
 String config_paystr[PARTYTAP_CFG_MAX_SWITCHES];
 int config_duration[PARTYTAP_CFG_MAX_SWITCHES];
 
+// Sensors and actuators
+Sensact *sensact = NULL;
+
 /// WebSocket Mutex
 WebSocketsClient webSocket;
-Servo servo;
+
 bool bDoUpdate = false;
 bool bDoReconnect = false;
 
@@ -128,8 +134,14 @@ void checkUpdate() {
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
 
+#ifdef ESP32_3248S035C
   t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
-  
+#endif
+#ifdef ESP32_4827S043C
+  t_httpUpdate_return ret = httpUpdate.update(client, config_lnbitshost, 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
+#endif  
+
+
   // switch (ret) {
   //   case HTTP_UPDATE_FAILED:
   //       Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
@@ -145,11 +157,11 @@ void checkUpdate() {
 }
 
 void beerClose() {
-  servo.write(config_servo_close);
+  sensact->writeServo(config_servo_close);
 }
 
 void beerOpen() {
-  servo.write(config_servo_open);
+  sensact->writeServo(config_servo_open);
 }
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost) {
@@ -158,6 +170,9 @@ void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,cons
   config_wifi_pwd = String(pwd);
   config_deviceid = String(deviceid);
   config_lnbitshost = String(lnbitshost);
+
+  config_wifi_ssid = "FRITZ!Box 7590 IP";
+  config_wifi_pwd = "21178618813120341261";
 
   saveConfig();
 
@@ -598,11 +613,8 @@ void setup()
   taskScheduler.addTask(backToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
 
-  checkWiFiTask.restartDelayed(1000);
-  checkUpdateTask.restartDelayed(5000);
 
   LittleFS.begin(true);
-
 
   smartdisplay_init();
   ui_init();
@@ -631,8 +643,53 @@ void setup()
   lv_textarea_set_text(ui_TextAreaConfigDeviceID,config_deviceid.c_str());
   lv_label_set_text(ui_LabelPINValue,"");
 
-  servo.attach(BIER_SERVO_PIN);
+  xTaskCreatePinnedToCore (
+    loop0,     // Function to implement the task
+    "loop0",   // Name of the task
+    20000,      // Stack size in bytes
+    NULL,      // Task input parameter
+    10,         // Priority of the task
+    NULL,      // Task handle.
+    0          // Core where the task should run
+  );
 
+  // initialize I2C
+#if defined(TAP_I2C_SCL) && defined(TAP_I2C_SDA) && defined (TAP_I2C_BUS)
+  sensact = new Sensact(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);
+  sensact->init();
+
+  // search NFC sensor
+  setUIStatus("Detecting NFC","Detecting NFC");
+  sensact->initNFC();
+    
+  // search for I2C servo
+#ifdef ESP32_3248S035C
+  sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
+  if (( ! sensact->isNFCAvailable() ) &&  ( ! sensact->isServoAvailable() )) {
+    sensact->initServo(TAP_SERVO_PIN);
+  }
+#else
+  if ( ! sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN) ) {
+    sensact->initServo(TAP_SERVO_PIN);
+  }
+#endif
+
+#else
+  sensact = new Sensact();
+  sensact->init();
+  sensact->initServo(TAP_SERVO_PIN);
+#endif
+
+  if (( sensact->isNFCAvailable()) && (sensact->isServoAvailable() )) {
+    setUIStatus("NFC and TAP available","NFC and TAP available");
+  } else if ( sensact->isServoAvailable() ) {
+    setUIStatus("TAP available","TAP available");   
+  } else if ( sensact->isNFCAvailable() ) {
+    setUIStatus("NFC available, no TAP!","NFC available, no TAP!");   
+  } else {
+    setUIStatus("no NFC and no TAP!","no NFC and no TAP!");   
+  }
+  
   beerClose();
   
   webSocket.onEvent(webSocketEvent);
@@ -643,17 +700,12 @@ void setup()
   // set label in the About screen
   setUIStatus("Initialized","Initialized");
 
+  checkWiFiTask.restartDelayed(1000);
+  checkUpdateTask.restartDelayed(5000);
+
   WiFi.begin(config_wifi_ssid.c_str(),config_wifi_pwd.c_str());
 
-  xTaskCreatePinnedToCore (
-    loop0,     // Function to implement the task
-    "loop0",   // Name of the task
-    20000,      // Stack size in bytes
-    NULL,      // Task input parameter
-    10,         // Priority of the task
-    NULL,      // Task handle.
-    0          // Core where the task should run
-  );
+
 
 }
 
