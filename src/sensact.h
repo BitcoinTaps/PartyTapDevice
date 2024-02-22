@@ -14,6 +14,8 @@
 #define SENSACT_NFC_CB_NO_BYTES     4
 #define SENSACT_NFC_CB_READ_SUCCESS 5
 #define SENSACT_NFC_CB_NO_LNURLW    6
+#define SENSACT_NFC_CB_NTAG424      7
+#define SENSACT_NFC_CB_READING    8
 
 class Sensact {
     private:

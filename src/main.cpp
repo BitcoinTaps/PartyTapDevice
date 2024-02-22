@@ -18,7 +18,6 @@
 
 std::recursive_mutex lvgl_mutex;
 
-#define STR_EMPTY      PSTR("")
 #define STR_INVOICE    PSTR("invoice")
 #define STR_SAT        PSTR("sat")
 #define STR_SWITCHES   PSTR("switches")
@@ -26,7 +25,7 @@ std::recursive_mutex lvgl_mutex;
 
 // config variables
 TapConfig config ;
-String config_wspath = STR_EMPTY;
+String config_wspath = "";
 
 // the switches data
 #define PARTYTAP_CFG_MAX_PRODUCTS 3
@@ -44,9 +43,10 @@ bool bDoReconnect = false;
 
 // data related to a payment
 int selectedItem = 0;  // the index of the selected button
-String payment_request = STR_EMPTY;  // the payment request
-String payment_hash = STR_EMPTY; // the payment hash
-String paymentStateURL = STR_EMPTY; // the URL to retrieve state of the payment
+String payment_request = "";  // the payment request
+String payment_hash = ""; // the payment hash
+String tap_payment_hash = ""; // the payment hash of the current tap action
+String paymentStateURL = ""; // the URL to retrieve state of the payment
 int tap_duration = 0;  // the duration of the tap
 
 // task functions
@@ -198,7 +198,7 @@ bool checkPIN(const char *pin) {
 void notifyOrderReceived()
 {
   String wsmessage = PSTR("{\"event\":\"acknowledged\",\"payment_hash\":\"");
-  wsmessage += payment_hash;
+  wsmessage += tap_payment_hash;
   wsmessage += PSTR("\"}");
   webSocket.sendTXT(wsmessage);  
 }
@@ -206,7 +206,7 @@ void notifyOrderReceived()
 void notifyOrderFulfilled()
 {
   String wsmessage = PSTR("{\"event\":\"fulfilled\",\"payment_hash\":\"");
-  wsmessage += payment_hash;
+  wsmessage += tap_payment_hash;
   wsmessage += PSTR("\"}");
   webSocket.sendTXT(wsmessage);  
 }
@@ -284,7 +284,7 @@ void freeBeerClicked()
 }
 
 void setUIStatus(const char *shortMsg, const char *longMsg, bool bDisplayQRCode = false) {
-  static char prevLongMsg[50] = STR_EMPTY;
+  static char prevLongMsg[50] = "";
   
   if ( strcmp(prevLongMsg,longMsg) == 0 ) {
     return;
@@ -332,8 +332,8 @@ void expireInvoice()
     checkNFCPaymentTask.disable();
   }
 
-  payment_hash = STR_EMPTY;
-  payment_request = STR_EMPTY;  
+  payment_hash = "";
+  payment_request = "";  
 }
 
 void showInvoice(DynamicJsonDocument *doc)
@@ -367,8 +367,8 @@ void wantBierClicked(int item) {
 
   // reset all parameters
   selectedItem = item;
-  payment_hash = STR_EMPTY;
-  payment_request = STR_EMPTY;
+  payment_hash = "";
+  payment_request = "";
   // set tap duration to default
   tap_duration = product[selectedItem].getTapDuration();
   
@@ -403,7 +403,9 @@ void handlePaid(DynamicJsonDocument *doc) {
 #endif
     return;
   }
-  payment_hash = STR_EMPTY;
+
+  tap_payment_hash = payment_hash;
+  payment_hash = "";
 
   expireInvoiceTask.disable();
   if ( sensact->isNFCAvailable() ) {
@@ -550,9 +552,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 
 
 void nfcReadCallback(int statusCode ) {
-#ifdef DEBUG
-  Serial.printf("NFC read status %d\n",statusCode);
-#endif
   switch ( statusCode ) {
     case SENSACT_NFC_CB_INCOMPATIBLE:
       setPanelMainMessage("INCOMPATIBLE CARD",3);
@@ -562,6 +561,10 @@ void nfcReadCallback(int statusCode ) {
       break;
     case SENSACT_NFC_CB_NO_NTAG424:
       setPanelMainMessage("BAD CARD",3);
+      break;  
+    case SENSACT_NFC_CB_READING:
+    case SENSACT_NFC_CB_NTAG424:
+      setPanelMainMessage("READING CARD",1);
       break;  
     case SENSACT_NFC_CB_NOREAD:
       //setPanelMainMessage("NOTHING READ",3);
@@ -637,7 +640,7 @@ void setup()
   lv_textarea_set_text(ui_TextAreaWifiPassword,config.getWiFiPWD());
   lv_textarea_set_text(ui_TextAreaConfigHost,config.getLNbitsHost());
   lv_textarea_set_text(ui_TextAreaConfigDeviceID,config.getDeviceID());
-  lv_label_set_text(ui_LabelPINValue,STR_EMPTY);
+  lv_label_set_text(ui_LabelPINValue,"");
 
   xTaskCreatePinnedToCore (
     loop0,     // Function to implement the task

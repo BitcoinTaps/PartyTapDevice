@@ -235,27 +235,33 @@ bool Sensact::readNFC(int timeout,void (*cb)(int), void (*result)(int,const char
         cb(SENSACT_NFC_CB_UNAVAILABLE);
         return false;
     }
-    
+
+
     if ( timeout > 0 ) {
         success = this->pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength, timeout);
     } else {
         success = this->pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
     }
 
+
+
     if ( ! success ) {
-        cb(SENSACT_NFC_CB_NOREAD);
         return false;
     }
+
+
 
     if ((uidLength != 7) && (uidLength != 4)) {
         cb(SENSACT_NFC_CB_INCOMPATIBLE);
         return false;
-    } 
-  
+    }   
+
     if (!this->pn532->ntag424_isNTAG424()) {
         cb(SENSACT_NFC_CB_NO_NTAG424);
         return false;
     }
+
+    cb(SENSACT_NFC_CB_READING);
 
     uint8_t bytesread = this->pn532->ntag424_ISOReadFile(this->nfcbuffer,sizeof(this->nfcbuffer));
     this->nfcbuffer[bytesread] = 0;
@@ -263,10 +269,14 @@ bool Sensact::readNFC(int timeout,void (*cb)(int), void (*result)(int,const char
     Serial.printf("Bytes read = %d\n",bytesread);
 #endif 
  
+ 
     if ( bytesread == 0 ) {
         cb(SENSACT_NFC_CB_NO_BYTES);
         return false;
     }
+
+    cb(SENSACT_NFC_CB_READING);
+
 
     if ( strncmp("lnurlw://",(char *)(this->nfcbuffer),9) != 0 ) {
 #ifdef DEBUG
