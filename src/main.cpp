@@ -515,19 +515,23 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         // get the message type
         const char *event = doc["event"].as<const char *>();
 #ifdef DEBUG
-        Serial.printf("WS Event type = %s\n",event.c_str());
+        Serial.printf("WS Event type = %s\n",event);
 #endif
         if ( strcmp(event,STR_SWITCHES) == 0 ) {
           configureSwitches(&doc);
         } else if ( strcmp(event,STR_INVOICE) == 0 ) {
           showInvoice(&doc);
         } else if ( strcmp(event,"paid") == 0 ) {     
-          setPanelMainMessage(PSTR("PAYMENT SUCCES"),5);
+          setPanelMainMessage(PSTR("PAYMENT SUCCES"),3);
           handlePaid(&doc);
         } else if ( strcmp(event,"paymentfailed") == 0 ) {
-          setPanelMainMessage("PAYMENT FAILED",5);
+          setPanelMainMessage("PAYMENT FAILED",3);
           checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3);  
-        }      
+        } else {
+#ifdef DEBUG
+          Serial.println(event);
+#endif
+        }
       }
       break;
     case WStype_PING:
@@ -551,33 +555,28 @@ void nfcReadCallback(int statusCode ) {
 #endif
   switch ( statusCode ) {
     case SENSACT_NFC_CB_INCOMPATIBLE:
-      setPanelMainMessage("INCOMPATIBLE CARD",5);
+      setPanelMainMessage("INCOMPATIBLE CARD",3);
       break;
     case SENSACT_NFC_CB_NO_BYTES:
-      setPanelMainMessage("MOVE CARD",5);
+      setPanelMainMessage("MOVE CARD",3);
       break;
     case SENSACT_NFC_CB_NO_NTAG424:
-      setPanelMainMessage("BAD CARD",5);
+      setPanelMainMessage("BAD CARD",3);
       break;  
     case SENSACT_NFC_CB_NOREAD:
-      // this is normal 
+      //setPanelMainMessage("NOTHING READ",3);
       break;
     case SENSACT_NFC_CB_UNAVAILABLE:
-      setPanelMainMessage("NFC UNAVAILABLE",5);
+      setPanelMainMessage("NFC UNAVAILABLE",3);
       break;    
     case SENSACT_NFC_CB_READ_SUCCESS:
-      setPanelMainMessage("READ SUCCES",5);
+      setPanelMainMessage("CARD READ",3);
       break;
   }
 }
 
 void nfcReadSucces(int len,const char *data ) {
-  if ( strncmp("lnurlw://",data,9) != 0 ) {
-#ifdef DEBUG
-    Serial.println("this is not an LNURLW");
-#endif
-    return;
-  }
+
 
 #ifdef DEBUG
   Serial.printf("NFC read succes %d\n",len);
@@ -661,8 +660,12 @@ void setup()
     
   // search for I2C servo
 #ifdef ESP32_3248S035C
+  Serial.println("Initialising servo");
   sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
-  if (( ! sensact->isNFCAvailable() ) &&  ( ! sensact->isServoAvailable() )) {
+  if ( sensact->isServoAvailable() ) {
+    Serial.println("Servo configured");
+  } else if ( ! sensact->isNFCAvailable() ) {
+    Serial.println("Using conventional servo");
     sensact->initServo(TAP_SERVO_PIN);
   }
 #else

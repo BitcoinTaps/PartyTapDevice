@@ -267,11 +267,19 @@ bool Sensact::readNFC(int timeout,void (*cb)(int), void (*result)(int,const char
         cb(SENSACT_NFC_CB_NO_BYTES);
         return false;
     }
+
+    if ( strncmp("lnurlw://",(char *)(this->nfcbuffer),9) != 0 ) {
+#ifdef DEBUG
+        Serial.println("this is not an LNURLW");
+#endif
+        cb(SENSACT_NFC_CB_NO_LNURLW);
+        return false;
+    }
  
 #ifdef DEBUG
     Serial.println((char *)(this->nfcbuffer));
 #endif 
-    cb(SENSACT_NFC_CB_READ_SUCCESS);
+    cb(SENSACT_NFC_CB_READ_SUCCESS);    
     result(bytesread,(const char *)this->nfcbuffer);
     return true;
  
