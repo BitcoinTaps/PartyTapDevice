@@ -50,20 +50,11 @@ bool Sensact::initServo(int pin) {
 
     this->tap_servo = new Servo();
 
-    if ( this->tap_servo->attach(pin) == 0 ) {
+    this->tap_servo->attach(pin);
 #ifdef DEBUG
-        Serial.println("[Sensact] Servo attached");
+    Serial.println("[Sensact] Servo attached");
 #endif 
-        return true;
-    } 
-    
-    // destroy tap servo and return
-    delete this->tap_servo;
-    this->tap_servo = NULL;
-#ifdef DEBUG
-    Serial.println("[Sensact] Servo attach failure");
-#endif 
-    return false;
+    return true;
 }
 
 bool Sensact::scanI2CAddress(int address) {
