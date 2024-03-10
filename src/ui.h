@@ -131,6 +131,10 @@ extern lv_obj_t * ui_ButtonConfigPINCancel;
 void ui_event_Label41(lv_event_t * e);
 extern lv_obj_t * ui_Label41;
 extern lv_obj_t * ui_LabelConfigPINMessage;
+
+extern lv_obj_t * ui_LabelConfigRSSI;
+extern lv_obj_t * ui_LabelConfigRSSIValue;
+
 void ui_event_KeyboardConfigWifi(lv_event_t * e);
 extern lv_obj_t * ui_KeyboardConfigWifi;
 extern lv_obj_t * ui_KeyboardNumeric;
@@ -166,9 +170,8 @@ extern lv_obj_t * ui_ButtonConfigSave;
 extern lv_obj_t * ui_Label11;
 void ui_event_ScreenBierFlowing(lv_event_t * e);
 extern lv_obj_t * ui_ScreenBierFlowing;
-extern lv_obj_t * ui_Panel4;
-extern lv_obj_t * ui_Label42;
 extern lv_obj_t * ui_Image3;
+extern lv_obj_t * ui_LabelInstructions;
 extern lv_obj_t * ui_BarBierProgress;
 extern lv_obj_t * ui_ButtonBierStart;
 extern lv_obj_t * ui_Label45;
@@ -205,7 +208,7 @@ void ButtonFreeClicked(lv_event_t * e );
 void ButtonMainBackClicked(lv_event_t * e);
 
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
-LV_IMG_DECLARE(ui_img_biertap256_png);    // assets/biertap256.png
+LV_IMG_DECLARE(ui_img_instructions);    // Bitcoin Taps logo
 
 
 // The font was created with the following command

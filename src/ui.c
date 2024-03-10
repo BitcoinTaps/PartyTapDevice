@@ -120,6 +120,8 @@ void ui_event_ButtonConfigPINCancel(lv_event_t * e);
 lv_obj_t * ui_ButtonConfigPINCancel;
 void ui_event_Label41(lv_event_t * e);
 lv_obj_t * ui_Label41;
+lv_obj_t * ui_LabelConfigRSSI;
+lv_obj_t * ui_LabelConfigRSSIValue;
 lv_obj_t * ui_LabelConfigPINMessage;
 void ui_event_KeyboardConfigWifi(lv_event_t * e);
 lv_obj_t * ui_KeyboardConfigWifi;
@@ -160,9 +162,8 @@ lv_obj_t * ui_ButtonConfigSave;
 lv_obj_t * ui_Label11;
 void ui_event_ScreenBierFlowing(lv_event_t * e);
 lv_obj_t * ui_ScreenBierFlowing;
-lv_obj_t * ui_Panel4;
-lv_obj_t * ui_Label42;
 lv_obj_t * ui_Image3;
+lv_obj_t * ui_LabelInstructions;
 lv_obj_t * ui_BarBierProgress;
 lv_obj_t * ui_ButtonBierStart;
 lv_obj_t * ui_Label45;
@@ -1162,11 +1163,29 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_opa(ui_Label36, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label36, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_LabelConfigRSSI = lv_label_create(ui_ScreenConfig);
+    lv_obj_set_width(ui_LabelConfigRSSI, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelConfigRSSI, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelConfigRSSI, 10);
+    lv_obj_set_y(ui_LabelConfigRSSI, 320);
+    lv_label_set_text(ui_LabelConfigRSSI, "RSSI");
+    lv_obj_set_style_text_color(ui_LabelConfigRSSI, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelConfigRSSI, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelConfigRSSI, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelConfigRSSIValue = lv_label_create(ui_ScreenConfig);
+    lv_obj_set_width(ui_LabelConfigRSSIValue, 210);
+    lv_obj_set_height(ui_LabelConfigRSSIValue, 30);
+    lv_obj_set_x(ui_LabelConfigRSSIValue, 100);
+    lv_obj_set_y(ui_LabelConfigRSSIValue, 320);
+    lv_label_set_text(ui_LabelConfigRSSIValue, "--");
+
+
     ui_Label14 = lv_label_create(ui_ScreenConfig);
     lv_obj_set_width(ui_Label14, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_Label14, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_Label14, 10);
-    lv_obj_set_y(ui_Label14, 320);
+    lv_obj_set_y(ui_Label14, 360);
     lv_label_set_text(ui_Label14, "Status");
     lv_obj_set_style_text_color(ui_Label14, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_Label14, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1283,7 +1302,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_width(ui_LabelConfigStatus, 210);
     lv_obj_set_height(ui_LabelConfigStatus, 90);
     lv_obj_set_x(ui_LabelConfigStatus, 100);
-    lv_obj_set_y(ui_LabelConfigStatus, 320);
+    lv_obj_set_y(ui_LabelConfigStatus, 360);
     lv_label_set_text(ui_LabelConfigStatus, "--");
 
     ui_ButtonConfigDone = lv_btn_create(ui_ScreenConfig);
@@ -1732,32 +1751,24 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_set_style_bg_color(ui_ScreenBierFlowing, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_ScreenBierFlowing, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_Panel4 = lv_obj_create(ui_ScreenBierFlowing);
-    lv_obj_set_width(ui_Panel4, 320);
-    lv_obj_set_height(ui_Panel4, 50);
-    lv_obj_clear_flag(ui_Panel4, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
-    lv_obj_set_style_radius(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui_Panel4, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui_Panel4, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(ui_Panel4, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    ui_Label42 = lv_label_create(ui_Panel4);
-    lv_obj_set_width(ui_Label42, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label42, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_align(ui_Label42, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Label42, "ENJOY YOUR DRINK!");
-    lv_obj_set_style_text_color(ui_Label42, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_Label42, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_Label42, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
-
     ui_Image3 = lv_img_create(ui_ScreenBierFlowing);
-    lv_img_set_src(ui_Image3, &ui_img_biertap256_png);
+    lv_img_set_src(ui_Image3, &ui_img_instructions);
     lv_obj_set_width(ui_Image3, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_Image3, LV_SIZE_CONTENT);    /// 256
-    lv_obj_set_y(ui_Image3, -10);
-    lv_obj_set_align(ui_Image3, LV_ALIGN_CENTER);
+    lv_obj_set_y(ui_Image3, 20);
+    lv_obj_set_align(ui_Image3, LV_ALIGN_TOP_MID);
     lv_obj_add_flag(ui_Image3, LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
     lv_obj_clear_flag(ui_Image3, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    ui_LabelInstructions = lv_label_create(ui_ScreenBierFlowing);
+    lv_obj_set_width(ui_LabelInstructions, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelInstructions, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelInstructions, LV_ALIGN_TOP_MID);
+    lv_obj_set_y(ui_LabelInstructions, 300);
+    lv_label_set_text(ui_LabelInstructions, "HOLD UNDER THE TAP\nTILT GLASS SLIGHTLY");
+    lv_obj_set_style_text_color(ui_LabelInstructions, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelInstructions, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelInstructions, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ButtonBierStart = lv_btn_create(ui_ScreenBierFlowing);
     lv_obj_set_width(ui_ButtonBierStart, 160);
@@ -1774,7 +1785,7 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_set_width(ui_Label45, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_Label45, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_Label45, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Label45, "START");
+    lv_label_set_text(ui_Label45, "TAP");
     lv_obj_set_style_text_color(ui_Label45, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_Label45, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label45, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);

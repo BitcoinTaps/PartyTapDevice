@@ -62,7 +62,7 @@ void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
-Task checkWiFiTask(TASK_SECOND, TASK_FOREVER, &checkWiFi);
+Task checkWiFiTask(2 * TASK_SECOND, TASK_FOREVER, &checkWiFi);
 Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
@@ -85,12 +85,33 @@ void update_finished() {
 }
 
 void update_progress(int cur, int total) {
-  char message[25];
+  static char message[25];
   snprintf_P(message, sizeof(message), PSTR("UPDATE PROGRESS %d%%"), 100 * cur / total);
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelAboutMessage, message);
   }
+}
+
+void display_rssi() {
+  static char message[20];
+  int rssi = WiFi.RSSI();
+  if ( rssi < -90 ) {
+    snprintf_P(message, sizeof(message), PSTR("Weak (%d)"), rssi);
+  } else if ( rssi < -80 ) {
+    snprintf_P(message, sizeof(message), PSTR("Fair (%d)"), rssi);
+  } else if ( rssi < -70 ) {
+    snprintf_P(message, sizeof(message), PSTR("Good (%d)"), rssi);
+  } else if ( rssi < 0 ) {
+    snprintf_P(message, sizeof(message), PSTR("Excellent (%d)"), rssi);
+  } else {
+    snprintf_P(message, sizeof(message), PSTR("No signal (%d)"), rssi);
+  }
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelConfigRSSIValue, message);
+  }  
 }
 
 void update_error(int err) {
@@ -416,7 +437,6 @@ void handlePaid(DynamicJsonDocument *doc) {
   beerScreen();
 }
 
-
 void configureSwitches(DynamicJsonDocument *doc) {
   char charValue[30];
 
@@ -529,6 +549,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         } else if ( strcmp(event,"paymentfailed") == 0 ) {
           setPanelMainMessage("PAYMENT FAILED",3);
           checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3);  
+        } else if ( strcmp(event,"error") == 0 ) {
+          setUIStatus("WebSocket error",doc["message"].as<const char *>());
         } else {
 #ifdef DEBUG
           Serial.println(event);
@@ -716,14 +738,13 @@ void checkWiFi() {
   if ( bDoReconnect ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
     bDoReconnect = false;
-    webSocket.disconnect();
+    bConnected = false;
+    webSocket.disconnect();    
     WiFi.disconnect();
     WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
   }
 
-  if ( checkWiFiTask.isFirstIteration() ) { 
-    bConnected = false;
-  }
+  display_rssi();
 
   wl_status_t status = WiFi.status();
   switch ( status ) {
