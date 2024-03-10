@@ -754,8 +754,10 @@ void checkWiFi() {
 #ifdef DEBUG
         Serial.println("Connecting WebSocket");
 #endif
+        
         config_wspath = "/partytap/api/v1/ws/";
         config_wspath += config.getDeviceID();
+        webSocket.disconnect();
         webSocket.beginSSL(config.getLNbitsHost(), 443, config_wspath);
         bConnected = true;
       }
