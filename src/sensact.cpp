@@ -72,6 +72,7 @@ bool Sensact::scanI2CAddress(int address) {
         case 0:
 #ifdef DEBUG
             Serial.println("[Sensact] device detected on bus");
+            Serial.println(address);
 #endif
             return true;
         case 2:
@@ -100,6 +101,10 @@ bool Sensact::initServo(int address, int pin) {
         Serial.println("[Sensact] tap servo not found on bus");
 #endif
         return false;
+    } else {
+#ifdef DEBUG
+        Serial.println("[Sensact] servo detected on bus");
+#endif
     }
     
     this->i2c_tap_servo = new I2CServo(this->_wire,address);

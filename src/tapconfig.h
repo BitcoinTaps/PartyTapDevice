@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+#define MODE_ONLINE  0
+#define MODE_OFFLINE 1
+#define MODE_AUTO    2
+
 class TapConfig {
     private:
         String wifi_ssid;
@@ -13,6 +17,7 @@ class TapConfig {
         String deviceid;
         String pin;
         int tap_duration;
+        int operatingmode;
     public:
         TapConfig();
 
@@ -27,6 +32,7 @@ class TapConfig {
         void setDeviceID(const char *s);
         void setPIN(const char *s);
         void setTapDuration(int i);
+        void setOperatingMode(int i);
 
         const char *getWiFiSSID();
         const char *getWiFiPWD();
@@ -36,6 +42,7 @@ class TapConfig {
         const char *getDeviceID();
         const char *getPIN();    
         int getTapDuration();
+        int getOperatingMode();
 };
 
 #endif

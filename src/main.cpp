@@ -14,7 +14,9 @@
 #include <mutex>
 #include <tapconfig.h>
 #include <tapproduct.h>
+#include <productconfig.h>
 #include <Adafruit_PN532_NTAG424.h>
+#include <bitcoin.h>
 
 std::recursive_mutex lvgl_mutex;
 
@@ -24,13 +26,9 @@ std::recursive_mutex lvgl_mutex;
 #define STR_RESTARTING PSTR("RESTARTING")
 
 // config variables
-TapConfig config ;
+TapConfig config;
 String config_wspath = "";
-
-// the switches data
-#define PARTYTAP_CFG_MAX_PRODUCTS 3
-int num_products = 0;
-TapProduct product[PARTYTAP_CFG_MAX_PRODUCTS];
+ProductConfig productConfig;
 
 // Sensors and actuators
 Sensact *sensact = NULL;
@@ -45,6 +43,7 @@ bool bDoReconnect = false;
 int selectedItem = 0;  // the index of the selected button
 String payment_request = "";  // the payment request
 String payment_hash = ""; // the payment hash
+String payment_pin = ""; // pin for offline payments
 String tap_payment_hash = ""; // the payment hash of the current tap action
 String paymentStateURL = ""; // the URL to retrieve state of the payment
 int tap_duration = 0;  // the duration of the tap
@@ -140,6 +139,7 @@ void checkUpdate() {
   if ( ! bDoUpdate ) {
     return;
   }
+  bDoUpdate = false;
 
   webSocket.disableHeartbeat();
   webSocket.disconnect();
@@ -152,14 +152,11 @@ void checkUpdate() {
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
+  httpUpdate.rebootOnUpdate(true);
 
 #ifdef ESP32_3248S035C
   t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
 #endif
-#ifdef ESP32_4827S043C
-  t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_4827S043C/firmware.bin");
-#endif  
-
 
   // switch (ret) {
   //   case HTTP_UPDATE_FAILED:
@@ -205,15 +202,42 @@ void updatePIN(const char *pin) {
   config.setPIN(pin);
   config.save();
 }
-  
-bool checkPIN(const char *pin) {
+
+bool checkConfigPIN(const char *pin) {
   if ( pin == NULL ) {
     return false;
   }
+
   if ( strcmp(pin,config.getPIN()) == 0 ) {
     return true;
   }
+
   return false;
+}
+
+
+void handlePINResult(const char *pin) {
+  if ( checkConfigPIN(pin) == true ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+
+    lv_dropdown_set_selected(ui_DropdownConfigOperatingMode,config.getOperatingMode());
+  	lv_disp_load_scr(ui_ScreenConfig);	
+		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+    return;
+  }
+
+
+  if ( strncmp(pin,payment_pin.c_str(),6) == 0 ) {
+    payment_pin = "";
+    beerScreen();
+    return;
+  }
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");    
+  }
+
 }
 
 void notifyOrderReceived()
@@ -353,6 +377,7 @@ void expireInvoice()
     checkNFCPaymentTask.disable();
   }
 
+  payment_pin = "";
   payment_hash = "";
   payment_request = "";  
 }
@@ -367,6 +392,7 @@ void showInvoice(DynamicJsonDocument *doc)
   if ( sensact->isNFCAvailable() ) {
     checkNFCPaymentTask.restart();
   }
+
   // Update UI
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -374,13 +400,15 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
     lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenMain);	
-    lv_label_set_text(ui_LabelHeaderMain,product[selectedItem].getPayString());
+    lv_label_set_text(ui_LabelHeaderMain,productConfig.getProduct(selectedItem)->getPayString());
+    lv_obj_set_x(ui_ButtonMainAbout, 0);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
   }
 }
 
 // called from LVGL thread
 void wantBierClicked(int item) {
-  if ( num_products == 0 ) {
+  if ( productConfig.getNumProducts() == 0 ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_disp_load_scr(ui_ScreenPin);	
     return;
@@ -390,30 +418,169 @@ void wantBierClicked(int item) {
   selectedItem = item;
   payment_hash = "";
   payment_request = "";
+  payment_pin = "";
+  
   // set tap duration to default
-  tap_duration = product[selectedItem].getTapDuration();
+  tap_duration = productConfig.getProduct(selectedItem)->getTapDuration();
   
   // send request to create invoice
-  if ( ! webSocket.isConnected() ) {
-    return;
+  if ((( config.getOperatingMode() == MODE_AUTO ) || ( config.getOperatingMode() == MODE_ONLINE)) && webSocket.isConnected() ) {
+    String wsmessage = PSTR("{\"event\":\"createinvoice\",\"switch_id\":\"");
+    wsmessage +=  productConfig.getProduct(selectedItem)->getSwitchID();
+    wsmessage += PSTR("\"}");
+
+    if ( webSocket.sendTXT(wsmessage) ) {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
+      lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    }
+  } else if (( config.getOperatingMode() == MODE_OFFLINE ) || ( config.getOperatingMode() == MODE_AUTO )) {
+    // take the offline route
+    const char *ckey = (const char *)productConfig.getKey();
+    unsigned char key[16];
+
+    for(int i=0;(i<16);i++) {
+      key[i] = (unsigned char)ckey[i];
+    }
+    key[16] = 0;
+
+#ifdef DEBUG
+    Serial.printf("KEY: ");
+    for (int i = 0; i < 16; i++)
+    {
+      Serial.printf("%02x",key[i]);
+    }
+    Serial.println();
+#endif
+
+    unsigned char iv[16];
+    unsigned char iiv[16];
+
+    for (int i = 0; i < 16; i++)
+    {
+      iiv[i] = random(256);
+      iv[i] = iiv[i];    
+    }
+
+#ifdef DEBUG
+    Serial.printf("IV: ");
+    for (int i = 0; i < 16; i++)
+    {
+      Serial.printf("%02x",iv[i]);
+
+    }
+    Serial.println();
+#endif
+
+    for(int i=0;(i<6);i++) {
+      payment_pin += String(random(10));
+    }
+    payment_pin[6] = 0;
+
+    unsigned char input[128];
+    memcpy(input, productConfig.getProduct(selectedItem)->getSwitchID(),8);
+    memset(input + 8,':',1);
+    memcpy(input + 9, payment_pin.c_str(), 6);
+    memset(input + 15,':',1);
+    input[16] = 0;
+
+#ifdef DEBUG
+    Serial.printf("Input: ");
+    for(int i=0;(i<16);i++) {
+      Serial.printf("%c",input[i]);
+    }
+    Serial.println();
+#endif
+
+    unsigned char output[128];
+
+    byte sha256Result[32];
+    mbedtls_md_context_t sha;
+    mbedtls_md_init(&sha);
+    mbedtls_md_setup(&sha,mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),0);
+    mbedtls_md_starts(&sha);
+    mbedtls_md_update(&sha,(const unsigned char *)(input),16);
+    mbedtls_md_finish(&sha,sha256Result);
+    mbedtls_md_free(&sha);
+
+#ifdef DEBUG
+    Serial.printf("SHA256: ");
+    for(int i=0;(i<32);i++) {
+      Serial.printf("%02x",sha256Result[i]);
+    }
+    Serial.println();
+#endif
+
+    memcpy(input + 16, sha256Result, 32);
+
+#ifdef DEBUG
+    Serial.printf("Input: ");
+    for(int i=0;(i<48);i++) {
+      Serial.printf("%02x",input[i]);
+    }
+    Serial.println();
+#endif
+
+    mbedtls_aes_context aes;
+    mbedtls_aes_setkey_enc( &aes, key, 128 );
+    mbedtls_aes_crypt_cbc( &aes, MBEDTLS_AES_ENCRYPT, 48, iv, input, output );
+    mbedtls_aes_free(&aes);
+
+#ifdef DEBUG
+    Serial.printf("Encrypted: ");
+    for(int i=0;(i<48);i++) {
+      Serial.printf("%02x",output[i]);
+    }
+    Serial.println();
+#endif
+
+
+    String url = "https://";
+    url += config.getLNbitsHost();
+    url += "/partytap/api/v1/device/";
+    url += config.getDeviceID();
+    url += "/payment?encrypted=";
+    for (int i=0;i<48;i++) {
+      char str[3];
+      sprintf(str, "%02x", (int)output[i]);
+      url += str;
+    }
+    url += "&iv=";
+    for (int i=0;i<16;i++) {
+      char str[3];
+      sprintf(str, "%02x", (int)iiv[i]);
+      url += str;
+    }
+    
+
+    byte *data = (byte *)calloc(strlen(url.c_str()) * 2, sizeof(byte));
+    size_t len = 0;
+    int res = convert_bits(data, &len, 5, (byte *)(url.c_str()), url.length(), 8, 1);
+    char *charLnurl = (char *)calloc(url.length() * 2, sizeof(byte));
+    bech32_encode(charLnurl, "lnurl", data, len);
+#ifdef DEBUG
+    Serial.println(charLnurl);
+#endif
+
+    // Update UI
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      
+      lv_label_set_text(ui_LabelHeaderMain, "PAY FOR YOUR DRINK");
+      lv_obj_set_x(ui_ButtonMainAbout, -70);
+      lv_obj_set_x(ui_ButtonMainEnterPIN, 70);
+      lv_obj_clear_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
+      lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
+      lv_qrcode_update(ui_QrcodeLnurl, charLnurl, strlen(charLnurl));
+      lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
+      lv_disp_load_scr(ui_ScreenMain);	
+    }
+    expireInvoiceTask.restartDelayed(TASK_SECOND * 60);
   }
 
-  String wsmessage = PSTR("{\"event\":\"createinvoice\",\"switch_id\":\"");
-  wsmessage += product[selectedItem].getSwitchID();
-  wsmessage += PSTR("\"}");
 
-  if ( webSocket.sendTXT(wsmessage) ) {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
-    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  }
 }
-
-
-void myDelay(uint32_t ms) {
-  delay(ms);
-}
-
 
 void handlePaid(DynamicJsonDocument *doc) {
   const char *phash = (*doc)["payment_hash"].as<const char *>();
@@ -437,34 +604,10 @@ void handlePaid(DynamicJsonDocument *doc) {
   beerScreen();
 }
 
-void configureSwitches(DynamicJsonDocument *doc) {
-  char charValue[30];
-
-  // clear current switches
-  num_products = 0;
-  
-  // bewaar opties in een keuzelijstje
-  JsonArray switches = (*doc)["switches"].as<JsonArray>();
-  num_products = switches.size() < PARTYTAP_CFG_MAX_PRODUCTS ? switches.size() : PARTYTAP_CFG_MAX_PRODUCTS;
-  for (int i=0;i < num_products;i++) {
-    JsonObject obj = switches[i];
-    product[i].setSwitchID(obj["id"].as<const char *>());
-    product[i].setLabel(obj["label"].as<const char *>());
-    product[i].setTapDuration(obj["duration"].as<int>());
-
-    float amount = obj["amount"].as<float>();    
-    const char *currency = obj["currency"].as<const char *>();
-    if ( strcmp(currency,"sat") == 0 ) { 
-      snprintf_P(charValue,sizeof(charValue),PSTR("PAY %.0f %s"),amount,currency);    
-    } else {
-      snprintf_P(charValue,sizeof(charValue),PSTR("PAY %.2f %s"),amount,currency);
-    }
-    product[i].setPayString(charValue);
-  }
-
+void configureSwitches() {
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    switch ( num_products ) {
+    switch ( productConfig.getNumProducts() ) {
       case 0:
         lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
@@ -472,7 +615,7 @@ void configureSwitches(DynamicJsonDocument *doc) {
         break;
       case 1:
         lv_obj_set_x(ui_ButtonAboutOne, 0);
-        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
+        lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
@@ -483,8 +626,8 @@ void configureSwitches(DynamicJsonDocument *doc) {
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_x(ui_ButtonAboutOne, -60);
         lv_obj_set_x(ui_ButtonAboutTwo, 60);
-        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
-        lv_label_set_text(ui_LabelAboutTwo, product[1].getLabel());
+        lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
+        lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
         break;
       case 3:
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
@@ -493,36 +636,97 @@ void configureSwitches(DynamicJsonDocument *doc) {
         lv_obj_set_x(ui_ButtonAboutOne, -105);
         lv_obj_set_x(ui_ButtonAboutTwo, 0);
         lv_obj_set_x(ui_ButtonAboutThree, 105);
-        lv_label_set_text(ui_LabelAboutOne, product[0].getLabel());
-        lv_label_set_text(ui_LabelAboutTwo, product[1].getLabel());
-        lv_label_set_text(ui_LabelAboutThree, product[2].getLabel());
+        lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
+        lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
+        lv_label_set_text(ui_LabelAboutThree, productConfig.getProduct(2)->getLabel());
         break;
      default:
         break;
     }
   }
 
-  setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve"));
+  // online 
+  switch ( config.getOperatingMode() ) {
+    case MODE_OFFLINE:
+      if ( productConfig.getNumProducts() > 0 ) {
+        setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve (offline)"));  
+      }
+      break;
+    case MODE_ONLINE:
+      if ( webSocket.isConnected() ) {
+        setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve (online)"));  
+      }    
+      break;
+    case MODE_AUTO:
+      if ( productConfig.getNumProducts() > 0 ) {
+        if ( webSocket.isConnected() ) {
+          setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve (online)"));  
+        } else {
+          setUIStatus(PSTR("Ready to Serve"),PSTR("Ready to Serve (offline)"));  
+        }
+      }
+      break;
+  }
+}
 
+void changeOperatingMode(const char *mode) {
+#ifdef DEBUG
+  Serial.println("Changing operating mode");
+  Serial.println(mode);
+#endif
+
+  if ( strncasecmp(mode,"online",6) == 0 ) {
+    config.setOperatingMode(MODE_ONLINE);
+    config.save();
+  } else if ( strncasecmp(mode,"offline",7) == 0 ) {
+    config.setOperatingMode(MODE_OFFLINE);
+    config.save();
+  } else if ( strncasecmp(mode,"auto",4) == 0 ) {
+    config.setOperatingMode(MODE_AUTO);
+    config.save();
+  }
 }
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+#ifdef DEBUG
+      Serial.printf("WebSocket event %d\n",type);
+#endif
   switch(type) {
     case WStype_DISCONNECTED:      
-      if ( WiFi.status() != WL_CONNECTED ) {
 #ifdef DEBUG
-        Serial.println("Wi-Fi disconnected");
+      Serial.println("WebSocket disconnected");
 #endif
-        setUIStatus(PSTR("WiFi Disconnected"),PSTR("WiFi Disconnected"));
-      } else {
-#ifdef DEBUG
-        Serial.println("WebSocket disconnected");
-#endif
-        setUIStatus("WebSocket Disconnected","WebSocket Disconnected");        
-      }      
+
+      switch ( config.getOperatingMode() ) {
+        case MODE_ONLINE:
+          if ( WiFi.status() != WL_CONNECTED ) {
+            setUIStatus("WiFi Disconnected","WiFi Disconnected");
+            webSocket.disableHeartbeat();
+          } else {
+            setUIStatus("WebSocket Disconnected","WebSocket Disconnected");  
+          }                
+          break;
+        case MODE_OFFLINE:
+          if ( productConfig.getNumProducts() > 0 ) {
+            setUIStatus("Ready to serve","Ready to serve (offline)");           
+          } else {
+            setUIStatus("No products to serve","No products (offline)");      
+          }
+          break;
+        case MODE_AUTO:
+          if ( productConfig.getNumProducts() > 0 ) {
+            setUIStatus("Ready to serve","Ready to serve (auto)");           
+          } else if ( WiFi.status() != WL_CONNECTED ) {
+            setUIStatus("WiFi Disconnected","WiFi Disconnected");
+            webSocket.disableHeartbeat();
+          } else {
+            setUIStatus("WebSocket Disconnected","WebSocket Disconnected");  
+          } 
+          break;
+      }               
       break;
     case WStype_CONNECTED:
-      setUIStatus("WebSocket Connected","WebSocket Connected");
+      setUIStatus("WebSocket Connected 1","WebSocket Connected");
       break;
     case WStype_TEXT:
       {
@@ -540,7 +744,12 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         Serial.printf("WS Event type = %s\n",event);
 #endif
         if ( strcmp(event,STR_SWITCHES) == 0 ) {
-          configureSwitches(&doc);
+#ifdef DEBUG
+          Serial.println("Received switches");
+#endif
+          productConfig.parse(&doc);        
+          productConfig.save();
+          configureSwitches();
         } else if ( strcmp(event,STR_INVOICE) == 0 ) {
           showInvoice(&doc);
         } else if ( strcmp(event,"paid") == 0 ) {     
@@ -685,12 +894,18 @@ void setup()
     
   // search for I2C servo
 #ifdef ESP32_3248S035C
+#ifdef DEBUG
   Serial.println("Initialising servo");
+#endif
   sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
   if ( sensact->isServoAvailable() ) {
+#ifdef DEBUG
     Serial.println("Servo configured");
+#endif
   } else if ( ! sensact->isNFCAvailable() ) {
+#ifdef DEBUG
     Serial.println("Using conventional servo");
+#endif
     sensact->initServo(TAP_SERVO_PIN);
   }
 #else
@@ -716,10 +931,19 @@ void setup()
   }
   
   beerClose();
+
+  if ( productConfig.load() ) {
+#ifdef DEBUG
+    Serial.println("[main] products loaded from flash\n");
+#endif    
+    configureSwitches();
+  }
+  
+
   
   webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(500);
-  webSocket.enableHeartbeat(10000,2000,2);
+  webSocket.setReconnectInterval(3000);
+  webSocket.enableHeartbeat(15000,4000,2);
     
 
   checkWiFiTask.restartDelayed(1000);
@@ -739,6 +963,7 @@ void checkWiFi() {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
     bDoReconnect = false;
     bConnected = false;
+    webSocket.disableHeartbeat();
     webSocket.disconnect();    
     WiFi.disconnect();
     WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
@@ -759,6 +984,7 @@ void checkWiFi() {
         config_wspath += config.getDeviceID();
         webSocket.disconnect();
         webSocket.beginSSL(config.getLNbitsHost(), 443, config_wspath);
+        webSocket.enableHeartbeat(15000,4000,2);
         bConnected = true;
       }
       break;
@@ -766,7 +992,25 @@ void checkWiFi() {
 #ifdef DEBUG
       Serial.println("ERROR_CONFIG_SSID");
 #endif
-      setUIStatus("SSID not found","SSID not found");
+      switch ( config.getOperatingMode() ) {
+        case MODE_ONLINE:
+          setUIStatus("SSID not found","SSID not found");      
+          break;
+        case MODE_OFFLINE:
+          if ( productConfig.getNumProducts() > 0 ) {
+            setUIStatus("Ready to serve","Ready to serve (offline)");      
+          } else {
+            setUIStatus("No products to serve","No products (offline)");      
+          }
+          break;
+        case MODE_AUTO:
+          if ( productConfig.getNumProducts() > 0 ) {
+            setUIStatus("Ready to serve","Ready to serve (auto)");      
+          } else {
+            setUIStatus("No products to server","No products (auto)");      
+          }
+          break;
+      }
       break;
     case WL_CONNECTION_LOST:
 #ifdef DEBUG

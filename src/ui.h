@@ -29,6 +29,9 @@ extern lv_obj_t * ui_PanelHeaderMain;
 extern lv_obj_t * ui_LabelHeaderMain;
 void ui_event_ButtonMainAbout(lv_event_t * e);
 extern lv_obj_t * ui_ButtonMainAbout;
+void ui_event_ButtonMainEnterPIN(lv_event_t * e);
+extern lv_obj_t * ui_ButtonMainEnterPIN;
+extern lv_obj_t * ui_LabelMainEnterPIN;
 extern lv_obj_t * ui_QrcodeLnurl;
 extern lv_obj_t * ui_Label18;
 extern lv_obj_t * ui_ScreenPin;
@@ -133,7 +136,9 @@ extern lv_obj_t * ui_Label41;
 extern lv_obj_t * ui_LabelConfigPINMessage;
 
 extern lv_obj_t * ui_LabelConfigRSSI;
+extern lv_obj_t * ui_LabelOperatingMode;
 extern lv_obj_t * ui_LabelConfigRSSIValue;
+extern lv_obj_t * ui_DropdownConfigOperatingMode;
 
 void ui_event_KeyboardConfigWifi(lv_event_t * e);
 extern lv_obj_t * ui_KeyboardConfigWifi;
@@ -190,6 +195,7 @@ void ButtonPinNineClicked(lv_event_t * e);
 void ButtonPinCancelClicked(lv_event_t * e);
 void ButtonPinZeroClicked(lv_event_t * e);
 void ButtonPinOKClicked(lv_event_t * e);
+void DropdownConfigOperatingModeChanged(lv_event_t *e);
 void ButtonConfigConnectClicked(lv_event_t * e);
 void ButtonOKPINClicked(lv_event_t * e);
 void ButtoCancelPINClicked(lv_event_t * e);
@@ -206,6 +212,7 @@ void ButtonAboutThreeClicked(lv_event_t * e);
 void ButtonAboutConfigClicked(lv_event_t * e);
 void ButtonFreeClicked(lv_event_t * e );
 void ButtonMainBackClicked(lv_event_t * e);
+void ButtonMainEnterPINClicked(lv_event_t * e);
 
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
 LV_IMG_DECLARE(ui_img_instructions);    // Bitcoin Taps logo

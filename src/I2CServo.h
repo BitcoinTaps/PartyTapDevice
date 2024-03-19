@@ -16,7 +16,6 @@ class I2CServo {
     TwoWire *_wire;    
     bool sendCommand(int cmd, int arg, int len);
     bool sendCommand(int cmd);
-    bool _debug;
   public:
     I2CServo(TwoWire *wire,int address);
     

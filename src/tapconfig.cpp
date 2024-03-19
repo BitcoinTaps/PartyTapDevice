@@ -12,6 +12,7 @@
 #define PARTYTAP_CFG_DEVICEID "deviceid"
 #define PARTYTAP_CFG_PIN "pin"
 #define PARTYTAP_CFG_TAP_DURATAION "duration"
+#define PARTYTAP_CFG_MODE "mode"
 
 TapConfig::TapConfig() {
     this->pin = String(CONFIG_PIN);
@@ -22,6 +23,7 @@ TapConfig::TapConfig() {
     this->wifi_ssid = "";
     this->wifi_pwd = "";
     this->tap_duration = 5000;
+    this->operatingmode = MODE_ONLINE;
 }
 
 bool TapConfig::load() {
@@ -59,6 +61,8 @@ bool TapConfig::load() {
           this->deviceid = obj["value"].as<const char *>();
         } else if ( name == PARTYTAP_CFG_TAP_DURATAION ) {
             this->tap_duration = obj["value"].as<int>();
+        } else if ( name == PARTYTAP_CFG_MODE ) {
+            this->operatingmode = obj["value"].as<int>();
         }
       }
 
@@ -88,6 +92,8 @@ bool TapConfig::save() {
     doc[6]["value"] = this->deviceid;
     doc[7]["name"] = PARTYTAP_CFG_TAP_DURATAION;
     doc[7]["value"] = this->tap_duration;
+    doc[8]["name"] = PARTYTAP_CFG_MODE;
+    doc[8]["value"] = this->operatingmode;
 
     String output = "";
     serializeJson(doc, output);
@@ -159,4 +165,12 @@ int TapConfig::getServoClose() {
 
 int TapConfig::getTapDuration() {
     return this->tap_duration;
+}
+
+void TapConfig::setOperatingMode(int i) {
+    this->operatingmode = i;
+}
+
+int TapConfig::getOperatingMode() {
+    return this->operatingmode;
 }
