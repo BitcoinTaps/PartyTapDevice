@@ -25,6 +25,9 @@ lv_obj_t * ui_LabelHeaderMain;
 void ui_event_ButtonMainAbout(lv_event_t * e);
 lv_obj_t * ui_ButtonMainAbout;
 lv_obj_t * ui_Label18;
+void ui_event_ButtonMainEnterPIN(lv_event_t * e);
+lv_obj_t * ui_ButtonMainEnterPIN;
+lv_obj_t * ui_LabelMainEnterPIN;
 lv_obj_t * ui_ScreenPin;
 lv_obj_t * ui_LabelPINValue;
 lv_obj_t * ui_Panel3;
@@ -225,6 +228,18 @@ void ui_event_ButtonMainAbout(lv_event_t * e)
         ButtonMainBackClicked(e);
     }
 }
+
+void ui_event_ButtonMainEnterPIN(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t * target = lv_event_get_target(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        //_ui_screen_change(ui_ScreenAbout, LV_SCR_LOAD_ANIM_NONE, 0, 0);
+        ButtonMainEnterPINClicked(e);
+    }
+}
+
+
 void ui_event_Button1(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -741,7 +756,7 @@ void ui_ScreenMain_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelHeaderMain, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ButtonMainAbout = lv_btn_create(ui_ScreenMain);
-    lv_obj_set_width(ui_ButtonMainAbout, 100);
+    lv_obj_set_width(ui_ButtonMainAbout, 120);
     lv_obj_set_height(ui_ButtonMainAbout, 50);
     lv_obj_set_x(ui_ButtonMainAbout, 0);
     lv_obj_set_y(ui_ButtonMainAbout, -10);
@@ -759,6 +774,28 @@ void ui_ScreenMain_screen_init(void)
     lv_obj_set_style_text_color(ui_Label18, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_Label18, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_Label18, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_ButtonMainEnterPIN = lv_btn_create(ui_ScreenMain);
+    lv_obj_set_width(ui_ButtonMainEnterPIN, 120);
+    lv_obj_set_height(ui_ButtonMainEnterPIN, 50);
+    lv_obj_set_x(ui_ButtonMainEnterPIN, -70);
+    lv_obj_set_y(ui_ButtonMainEnterPIN, -10);
+    lv_obj_set_align(ui_ButtonMainEnterPIN, LV_ALIGN_BOTTOM_MID);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonMainEnterPIN, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonMainEnterPIN, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonMainEnterPIN, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
+    ui_LabelMainEnterPIN = lv_label_create(ui_ButtonMainEnterPIN);
+    lv_obj_set_width(ui_LabelMainEnterPIN, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelMainEnterPIN, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelMainEnterPIN, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelMainEnterPIN, "ENTER PIN");
+    lv_obj_set_style_text_color(ui_LabelMainEnterPIN, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelMainEnterPIN, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelMainEnterPIN, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
 
     // initialize the QR code
     lv_color_t bg_color = lv_color_hex(0xFFFFFF);
@@ -794,7 +831,7 @@ void ui_ScreenMain_screen_init(void)
 
 
 
-
+    lv_obj_add_event_cb(ui_ButtonMainEnterPIN,ui_event_ButtonMainEnterPIN, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonMainAbout, ui_event_ButtonMainAbout, LV_EVENT_ALL, NULL);
 
 }
@@ -1818,8 +1855,9 @@ void ui_init(void)
     lv_disp_t * dispp = lv_disp_get_default();
     lv_theme_t * theme = lv_theme_default_init(dispp, lv_palette_main(LV_PALETTE_BLUE), lv_palette_main(LV_PALETTE_RED),
                                                false, LV_FONT_DEFAULT);
+#ifdef ESP32_3248S035C
     lv_disp_set_rotation(dispp, LV_DISP_ROT_180);
-
+#endif
 
     lv_disp_set_theme(dispp, theme);
     ui_ScreenAbout_screen_init();

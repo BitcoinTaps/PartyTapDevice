@@ -89,14 +89,7 @@ void ButtonPinZeroClicked(lv_event_t * e)
 void ButtonPinOKClicked(lv_event_t * e)
 {
 	// Your code here
-	if ( checkPIN(entered_pin.c_str()) == true ) {
-		lv_disp_load_scr(ui_ScreenConfig);	
-		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
-		entered_pin = "";
-	} else {
-		lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");
-		entered_pin = "";
-	}
+	handlePINResult(entered_pin.c_str());
 }
 
 void ButtonConfigTunerClicked(lv_event_t * e)
@@ -125,7 +118,7 @@ void ButtonOKPINClicked(lv_event_t * e)
 	const char *newPIN = lv_textarea_get_text(ui_TextAreaConfigPINNew);
 	const char *repeatPIN = lv_textarea_get_text(ui_TextAreaConfigPINRepeat);
 
-	if ( checkPIN(currentPIN) == false ) {	
+	if ( checkConfigPIN(currentPIN) == false ) {	
 		lv_label_set_text(ui_LabelConfigPINMessage,"Current PIN incorrect");
 		return;
 	}
@@ -213,6 +206,12 @@ void ButtonFreeClicked(lv_event_t *e)
 void ButtonMainBackClicked(lv_event_t *e) {
 	backToAboutPage();
 }
+
+void ButtonMainEnterPINClicked(lv_event_t *e) {
+	entered_pin = "";
+	toConfigPage();
+}
+
 
 void ButtonAboutConfigClicked(lv_event_t *e) {
 	entered_pin = "";

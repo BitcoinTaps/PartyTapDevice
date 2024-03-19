@@ -29,6 +29,9 @@ extern lv_obj_t * ui_PanelHeaderMain;
 extern lv_obj_t * ui_LabelHeaderMain;
 void ui_event_ButtonMainAbout(lv_event_t * e);
 extern lv_obj_t * ui_ButtonMainAbout;
+void ui_event_ButtonMainEnterPIN(lv_event_t * e);
+extern lv_obj_t * ui_ButtonMainEnterPIN;
+extern lv_obj_t * ui_LabelMainEnterPIN;
 extern lv_obj_t * ui_QrcodeLnurl;
 extern lv_obj_t * ui_Label18;
 extern lv_obj_t * ui_ScreenPin;
@@ -206,6 +209,7 @@ void ButtonAboutThreeClicked(lv_event_t * e);
 void ButtonAboutConfigClicked(lv_event_t * e);
 void ButtonFreeClicked(lv_event_t * e );
 void ButtonMainBackClicked(lv_event_t * e);
+void ButtonMainEnterPINClicked(lv_event_t * e);
 
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
 LV_IMG_DECLARE(ui_img_instructions);    // Bitcoin Taps logo

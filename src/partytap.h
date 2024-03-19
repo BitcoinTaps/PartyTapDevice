@@ -1,13 +1,17 @@
 #ifndef _PARTYTAP_H_
 #define _PARTYTAP_H_
 
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void doUpdate();
 
-bool checkPIN(const char *pin);
+bool checkConfigPIN(const char *pin);
+
+void handlePINResult(const char *pin);
 
 void updatePIN(const char *pin);
 
