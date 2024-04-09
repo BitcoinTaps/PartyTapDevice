@@ -115,7 +115,37 @@ void display_rssi() {
 
 void update_error(int err) {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATE FAILURE"));
+  switch (err ) {
+    case HTTP_UE_NO_PARTITION:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("NO PARTITION"));
+      break;
+    case HTTP_UE_BIN_FOR_WRONG_FLASH:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("WRONG FLASH"));
+      break;
+    case HTTP_UE_BIN_VERIFY_HEADER_FAILED:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("VERIFY FAILED"));
+      break;
+    case HTTP_UE_SERVER_FAULTY_MD5:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("HASH ERROR"));
+      break;
+    case HTTP_UE_SERVER_WRONG_HTTP_CODE:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("BAD SERVER RESPONSE"));
+      break;
+    case HTTP_UE_SERVER_FORBIDDEN:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ALLOWED"));
+      break;
+    case HTTP_UE_SERVER_FILE_NOT_FOUND:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("FILE NOT FOUND"));
+      break;
+    case HTTP_UE_SERVER_NOT_REPORT_SIZE:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("SIZE NOT REPORTED"));
+      break;
+    case HTTP_UE_TOO_LESS_SPACE:
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ENOUGH SPACE"));
+      break;
+    default:
+      break;
+  }
 }
 
 void doUpdate() {
@@ -154,22 +184,20 @@ void checkUpdate() {
   httpUpdate.onError(update_error);
   httpUpdate.rebootOnUpdate(true);
 
+
 #ifdef ESP32_3248S035C
   t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
 #endif
 
-  // switch (ret) {
-  //   case HTTP_UPDATE_FAILED:
-  //       Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-  //       break;
-  //     case HTTP_UPDATE_NO_UPDATES:
-  //       Serial.println("HTTP_UPDATE_NO_UPDATES");
-  //       break;
-
-  //     case HTTP_UPDATE_OK:
-  //       Serial.println("HTTP_UPDATE_OK");
-  //       break;
-  //   }
+  if ( ret == HTTP_UPDATE_FAILED ) {
+#ifdef DEBUG
+    Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+#endif
+    update_error(httpUpdate.getLastError());
+    delay(10000);
+    ESP.restart();
+    return;
+  }
 }
 
 void beerClose() {
