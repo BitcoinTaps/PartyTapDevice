@@ -129,7 +129,7 @@ void update_error(int err) {
       lv_label_set_text(ui_LabelAboutMessage, PSTR("HASH ERROR"));
       break;
     case HTTP_UE_SERVER_WRONG_HTTP_CODE:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("BAD SERVER RESPONSE"));
+      lv_label_set_text(ui_LabelAboutMessage, PSTR("BAD SERVER RESPONSE"));      
       break;
     case HTTP_UE_SERVER_FORBIDDEN:
       lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ALLOWED"));
@@ -184,11 +184,13 @@ void checkUpdate() {
   httpUpdate.onError(update_error);
   httpUpdate.rebootOnUpdate(true);
 
+#define FIRMWARE_HOST "firmware.bitcointaps.com"
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
+#define FIRMWARE_PATH "/partytap/ESP32_3248S035C/" STR(FIRMWARE_VERSION) "/firmware.bin"
 
-#ifdef ESP32_3248S035C
-  t_httpUpdate_return ret = httpUpdate.update(client, config.getLNbitsHost(), 443, "/partytap/static/firmware/ESP32_3248S035C/firmware.bin");
-#endif
-
+  t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, FIRMWARE_PATH);
+  
   if ( ret == HTTP_UPDATE_FAILED ) {
 #ifdef DEBUG
     Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
