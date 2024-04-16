@@ -58,7 +58,7 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
     if ( doc->containsKey("key") ) {
         this->key = (*doc)["key"].as<const char *>();    
 #ifdef DEBUG
-        Serial.printf("[ProductConfig::parse] Got encryption key: '%s'\n",this->key.c_str());
+        Serial.printf("[ProductConfig::parse] Got encryption key\n");
 #endif
     }
 

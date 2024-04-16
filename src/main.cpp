@@ -61,7 +61,7 @@ void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
-Task checkWiFiTask(2 * TASK_SECOND, TASK_FOREVER, &checkWiFi);
+Task checkWiFiTask(4 * TASK_SECOND, TASK_FOREVER, &checkWiFi);
 Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
@@ -1065,6 +1065,7 @@ void checkWiFi() {
 #endif
       break;
     case WL_DISCONNECTED:
+      setUIStatus("Wi-Fi disconnected","Wi-Fi disconnected");
 #ifdef DEBUG
       Serial.println("WL_DISCONNECTED");
 #endif
