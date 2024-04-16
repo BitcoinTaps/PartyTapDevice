@@ -45,7 +45,7 @@ String payment_request = "";  // the payment request
 String payment_hash = ""; // the payment hash
 String payment_pin = ""; // pin for offline payments
 String tap_payment_hash = ""; // the payment hash of the current tap action
-String paymentStateURL = ""; // the URL to retrieve state of the payment
+//String paymentStateURL = ""; // the URL to retrieve state of the payment
 int tap_duration = 0;  // the duration of the tap
 
 // task functions
@@ -166,6 +166,7 @@ void doUpdate() {
 }
 
 void checkUpdate() {
+  static char firmware_path[100];
   if ( ! bDoUpdate ) {
     return;
   }
@@ -185,11 +186,10 @@ void checkUpdate() {
   httpUpdate.rebootOnUpdate(true);
 
 #define FIRMWARE_HOST "firmware.bitcointaps.com"
-#define STR1(x)  #x
-#define STR(x)  STR1(x)    
-#define FIRMWARE_PATH "/partytap/ESP32_3248S035C/" STR(FIRMWARE_VERSION) "/firmware.bin"
+  snprintf_P(firmware_path, sizeof(firmware_path), PSTR("/partytap/ESP32_3248S035C/%s/firmware.bin"), productConfig.getServerVersion());
 
-  t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, FIRMWARE_PATH);
+
+  t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, firmware_path);
   
   if ( ret == HTTP_UPDATE_FAILED ) {
 #ifdef DEBUG
@@ -339,6 +339,9 @@ void beerScreen()
 
 void beerStart()
 {
+  // the user hascommende to tap the beer, delete the payment_pin for offline payments
+  payment_pin = "";
+  
   notifyOrderReceived();
   beerTapProgressTask.setInterval(tap_duration / TAPPROGRESS_STEPS);
   beerTapProgressTask.restart();
@@ -635,6 +638,15 @@ void handlePaid(DynamicJsonDocument *doc) {
 }
 
 void configureSwitches() {
+  // hide the update button if versions are the same 
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
+  if ( strcmp(productConfig.getServerVersion(),STR(FIRMWARE_VERSION)) != 0 ) {
+    lv_obj_clear_flag(ui_ButtonConfigUpdate,LV_OBJ_FLAG_HIDDEN);
+  } else {
+    lv_obj_add_flag(ui_ButtonConfigUpdate,LV_OBJ_FLAG_HIDDEN);
+  }
+
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     switch ( productConfig.getNumProducts() ) {

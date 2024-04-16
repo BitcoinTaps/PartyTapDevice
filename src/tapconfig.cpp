@@ -16,7 +16,7 @@
 
 TapConfig::TapConfig() {
     this->pin = String(CONFIG_PIN);
-    this->lnbitshost = "lnbits.bitcointaps.com";
+    this->lnbitshost = "party.bitcointaps.com";
     this->deviceid = "";
     this->servo_close = 90;
     this->servo_open = 90;

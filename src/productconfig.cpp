@@ -16,6 +16,8 @@ ProductConfig::ProductConfig() {
     this->numProducts = 0;
     this->key = "0000111122224444";
 
+    // the extension version of the PartyTap extension at the server. If no version is provided, it is assumed that this is the version
+    this->serverVersion = "838644"; 
 }
 
 int ProductConfig::getNumProducts() {
@@ -30,6 +32,10 @@ const char *ProductConfig::getKey() {
     return this->key.c_str();
 }
 
+const char *ProductConfig::getServerVersion() {
+    return this->serverVersion.c_str();
+}
+
 bool ProductConfig::parse(DynamicJsonDocument *doc) {
     this->numProducts = 0;
     
@@ -37,13 +43,17 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
     Serial.println("ProductCondig::parse");
 #endif
 
-    JsonArray switches = (*doc)["switches"].as<JsonArray>();
-    this->numProducts = switches.size() < PARTYTAP_CFG_MAX_PRODUCTS ? switches.size() : PARTYTAP_CFG_MAX_PRODUCTS;
 
 #ifdef DEBUG
     Serial.printf("ProductConfig::parse, num produicts = %d\n",this->numProducts);
 #endif
 
+    if ( doc->containsKey("version")) {
+        this->serverVersion = (*doc)["version"].as<const char *>();
+#ifdef DEBUG
+        Serial.printf("[ProductConfig::parse] Server version: '%s'\n",this->serverVersion.c_str());
+#endif
+    }
 
     if ( doc->containsKey("key") ) {
         this->key = (*doc)["key"].as<const char *>();    
@@ -51,6 +61,16 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
         Serial.printf("[ProductConfig::parse] Got encryption key: '%s'\n",this->key.c_str());
 #endif
     }
+
+    if ( ! doc->containsKey("switches")) {
+#ifdef DEBUG
+        Serial.printf("[ProductConfig::parse] No switches in config\n");
+#endif
+        return true;        
+    }
+
+    JsonArray switches = (*doc)["switches"].as<JsonArray>();
+    this->numProducts = switches.size() < PARTYTAP_CFG_MAX_PRODUCTS ? switches.size() : PARTYTAP_CFG_MAX_PRODUCTS;
 
     for (int i=0;i < this->numProducts;i++) {
         JsonObject obj = switches[i];

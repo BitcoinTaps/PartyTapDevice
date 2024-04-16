@@ -1636,6 +1636,7 @@ void ui_ScreenConfigAdvanced_screen_init(void)
     lv_obj_set_y(ui_ButtonConfigUpdate, -10);
     lv_obj_set_align(ui_ButtonConfigUpdate, LV_ALIGN_BOTTOM_LEFT);
     lv_obj_add_flag(ui_ButtonConfigUpdate, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_add_flag(ui_ButtonConfigUpdate,LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ButtonConfigUpdate, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_ButtonConfigUpdate, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_ButtonConfigUpdate, 255, LV_PART_MAIN | LV_STATE_DEFAULT);

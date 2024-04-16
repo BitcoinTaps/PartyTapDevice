@@ -97,6 +97,7 @@ void ButtonPinOKClicked(lv_event_t * e)
 {
 	// Your code here
 	handlePINResult(entered_pin.c_str());
+	entered_pin = "";
 }
 
 void ButtonConfigTunerClicked(lv_event_t * e)

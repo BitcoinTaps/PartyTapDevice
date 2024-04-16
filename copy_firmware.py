@@ -17,6 +17,16 @@ template_dir = f"{lnbits_dir}/templates/partytap"
 for filename in ['firmware.bin','partitions.bin','bootloader.bin']:
     shutil.copyfile(f"{build_dir}/{filename}",f"{firmware_dir}/{filename}")
 
+# update tasks.py
+with open(f"{lnbits_dir}/tasks.py") as file:
+    content = file.read()
+
+content = re.sub("\"version\"\: \".*\"",f"\"version\": \"{firmware_version}\"",content)
+
+with open(f"{lnbits_dir}/tasks.py","w") as file:
+    file.write(content)
+
+
 # update manifest
 with open(f"{firmware_dir}/manifest.json","r") as file:
         data = json.load(file)
