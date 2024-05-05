@@ -1459,8 +1459,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_width(ui_TextAreaConfigPINCurrent, 150);
     lv_obj_set_height(ui_TextAreaConfigPINCurrent, LV_SIZE_CONTENT);    /// 70
     lv_obj_set_align(ui_TextAreaConfigPINCurrent, LV_ALIGN_TOP_RIGHT);
-    if("0123456789" == "") lv_textarea_set_accepted_chars(ui_TextAreaConfigPINCurrent, NULL);
-    else lv_textarea_set_accepted_chars(ui_TextAreaConfigPINCurrent, "0123456789");
+    lv_textarea_set_accepted_chars(ui_TextAreaConfigPINCurrent, "0123456789");
     lv_textarea_set_max_length(ui_TextAreaConfigPINCurrent, 6);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigPINCurrent, "Current PIN");
     lv_textarea_set_one_line(ui_TextAreaConfigPINCurrent, true);

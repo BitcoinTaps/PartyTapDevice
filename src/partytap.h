@@ -1,12 +1,16 @@
 #ifndef _PARTYTAP_H_
 #define _PARTYTAP_H_
 
+#include <Arduino.h>
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define PAYMENT_PIN_LEN 3  // The length in digits of the payment pin
+
+extern String payment_pin;
 
 void changeOperatingMode(const char *mode);
 

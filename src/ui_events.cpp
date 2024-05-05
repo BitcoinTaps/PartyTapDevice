@@ -5,7 +5,14 @@
 String entered_pin = "";
 
 void addToPIN(int digit) {
-  if (  entered_pin.length() < 6 ) {
+	if (( payment_pin.length() > 0 ) && ( entered_pin.length() >= payment_pin.length())) {
+		// return if longer than the payment_pin length (if there is a payment pin)
+		return;
+	}
+	if ( entered_pin.length() >= 6 ) {
+		// return if longer than th config pin length
+		return;
+	}
     entered_pin += digit;
 
     String hidePIN = "";
@@ -13,7 +20,6 @@ void addToPIN(int digit) {
       hidePIN += "*";
     }
     lv_label_set_text(ui_LabelPINValue,hidePIN.c_str());
-  }
 }
 
 void ButtonPinOneClicked(lv_event_t * e)

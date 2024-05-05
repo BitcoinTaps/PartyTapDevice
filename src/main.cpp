@@ -25,6 +25,7 @@ std::recursive_mutex lvgl_mutex;
 #define STR_SWITCHES   PSTR("switches")
 #define STR_RESTARTING PSTR("RESTARTING")
 
+
 // config variables
 TapConfig config;
 String config_wspath = "";
@@ -247,6 +248,7 @@ bool checkConfigPIN(const char *pin) {
 
 
 void handlePINResult(const char *pin) {
+
   if ( checkConfigPIN(pin) == true ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
 
@@ -257,12 +259,16 @@ void handlePINResult(const char *pin) {
   }
 
 
-  if ( strncmp(pin,payment_pin.c_str(),6) == 0 ) {
+  Serial.println(payment_pin);
+  Serial.println(pin);
+  if ((payment_pin.length() == PAYMENT_PIN_LEN) && (strncmp(pin,payment_pin.c_str(),PAYMENT_PIN_LEN) == 0 )) {
+    Serial.println("PIN correct");
     payment_pin = "";
+   	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
     beerScreen();
     return;
   }
-
+ 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");    
@@ -330,6 +336,7 @@ void updateBeerTapProgress()
 
 void beerScreen()
 {
+  payment_pin = "";
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 	lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
@@ -455,6 +462,11 @@ void wantBierClicked(int item) {
   
   // set tap duration to default
   tap_duration = productConfig.getProduct(selectedItem)->getTapDuration();
+
+  if ( productConfig.getProduct(selectedItem)->getAmount() == 0 ) {
+    beerScreen();
+    return;
+  }
   
   // send request to create invoice
   if ((( config.getOperatingMode() == MODE_AUTO ) || ( config.getOperatingMode() == MODE_ONLINE)) && webSocket.isConnected() ) {
@@ -505,17 +517,17 @@ void wantBierClicked(int item) {
     Serial.println();
 #endif
 
-    for(int i=0;(i<6);i++) {
+    for(int i=0;(i<PAYMENT_PIN_LEN);i++) {
       payment_pin += String(random(10));
     }
-    payment_pin[6] = 0;
+    payment_pin[PAYMENT_PIN_LEN] = 0;
 
     unsigned char input[128];
     memcpy(input, productConfig.getProduct(selectedItem)->getSwitchID(),8);
     memset(input + 8,':',1);
-    memcpy(input + 9, payment_pin.c_str(), 6);
-    memset(input + 15,':',1);
-    input[16] = 0;
+    memcpy(input + 9, payment_pin.c_str(), PAYMENT_PIN_LEN);
+    memset(input + 9 + PAYMENT_PIN_LEN,':',1);
+    input[9 + PAYMENT_PIN_LEN + 1] = 0;
 
 #ifdef DEBUG
     Serial.printf("Input: ");
