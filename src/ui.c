@@ -162,6 +162,10 @@ lv_obj_t * ui_Tap_duration;
 lv_obj_t * ui_LabelConfigTapDuration;
 void ui_event_SliderConfigTapDuration(lv_event_t * e);
 lv_obj_t * ui_SliderConfigTapDuration;
+lv_obj_t * ui_LabelBacklight;
+lv_obj_t * ui_LabelConfigBacklight;
+void ui_event_SliderConfigBacklight(lv_event_t * e);
+lv_obj_t * ui_SliderConfigBacklight;
 void ui_event_ButtonConfigSave(lv_event_t * e);
 lv_obj_t * ui_ButtonConfigSave;
 lv_obj_t * ui_Label11;
@@ -575,6 +579,14 @@ void ui_event_SliderConfigTapDuration(lv_event_t * e)
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_VALUE_CHANGED) {
         _ui_slider_set_text_value(ui_LabelConfigTapDuration, target, "", "");
+    }
+}
+void ui_event_SliderConfigBacklight(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t * target = lv_event_get_target(e);
+    if(event_code == LV_EVENT_VALUE_CHANGED) {
+        _ui_slider_set_text_value(ui_LabelConfigBacklight, target, "", "");
     }
 }
 void ui_event_ButtonConfigSave(lv_event_t * e)
@@ -1788,11 +1800,45 @@ void ui_ScreenConfigAdvanced_screen_init(void)
     lv_obj_set_style_bg_color(ui_SliderConfigTapDuration, lv_color_hex(BB_BGCOLOR), LV_PART_KNOB | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_SliderConfigTapDuration, 255, LV_PART_KNOB | LV_STATE_DEFAULT);
 
+    ui_LabelBacklight = lv_label_create(ui_ScreenConfigAdvanced);
+    lv_obj_set_width(ui_LabelBacklight, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelBacklight, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelBacklight, 15);
+    lv_obj_set_y(ui_LabelBacklight, 295);
+    lv_label_set_text(ui_LabelBacklight, "Backlight intensity");
+
+    ui_LabelConfigBacklight = lv_label_create(ui_ScreenConfigAdvanced);
+    lv_obj_set_width(ui_LabelConfigBacklight, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelConfigBacklight, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelConfigBacklight, -15);
+    lv_obj_set_y(ui_LabelConfigBacklight, 295);
+    lv_obj_set_align(ui_LabelConfigBacklight, LV_ALIGN_TOP_RIGHT);
+    lv_label_set_text(ui_LabelConfigBacklight, "--");
+
+    ui_SliderConfigBacklight = lv_slider_create(ui_ScreenConfigAdvanced);
+    lv_slider_set_range(ui_SliderConfigBacklight, 1, 100);
+    lv_obj_set_width(ui_SliderConfigBacklight, 290);
+    lv_obj_set_height(ui_SliderConfigBacklight, 10);
+    lv_obj_set_x(ui_SliderConfigBacklight, 15);
+    lv_obj_set_y(ui_SliderConfigBacklight, 320);
+    lv_obj_set_style_bg_color(ui_SliderConfigBacklight, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderConfigBacklight, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_SliderConfigBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_SliderConfigBacklight, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_SliderConfigBacklight, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_bg_color(ui_SliderConfigBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_INDICATOR | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderConfigBacklight, 255, LV_PART_INDICATOR | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_bg_color(ui_SliderConfigBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_KNOB | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderConfigBacklight, 255, LV_PART_KNOB | LV_STATE_DEFAULT);
+
+
     ui_ButtonConfigSave = lv_btn_create(ui_ScreenConfigAdvanced);
     lv_obj_set_width(ui_ButtonConfigSave, 160);
     lv_obj_set_height(ui_ButtonConfigSave, 50);
     lv_obj_set_x(ui_ButtonConfigSave, 0);
-    lv_obj_set_y(ui_ButtonConfigSave, 280);
+    lv_obj_set_y(ui_ButtonConfigSave, 340);
     lv_obj_set_align(ui_ButtonConfigSave, LV_ALIGN_TOP_MID);
     lv_obj_add_flag(ui_ButtonConfigSave, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_clear_flag(ui_ButtonConfigSave, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -1815,6 +1861,7 @@ void ui_ScreenConfigAdvanced_screen_init(void)
     lv_obj_add_event_cb(ui_ButtonConfigServoClose, ui_event_ButtonConfigServoClose, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonConfigServoOpen, ui_event_ButtonConfigServoOpen, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_SliderConfigTapDuration, ui_event_SliderConfigTapDuration, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_SliderConfigBacklight, ui_event_SliderConfigBacklight, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonConfigSave, ui_event_ButtonConfigSave, LV_EVENT_ALL, NULL);
 
 }

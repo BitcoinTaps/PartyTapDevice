@@ -222,11 +222,14 @@ void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,cons
   bDoReconnect = true;
 }
 
-void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration) {
+void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration,int32_t backlight) {
   config.setServoClose(servoClosed);
   config.setServoOpen(servoOpen);
   config.setTapDuration(tapDuration);
+  config.setBacklight(backlight);
   config.save();
+
+  smartdisplay_lcd_set_backlight((float)(backlight / 100.0));
 }
 
 void updatePIN(const char *pin) {
@@ -907,18 +910,20 @@ void setup()
 #ifdef BOARD_HAS_RGB_LED
   smartdisplay_led_set_rgb(0,0,0);
 #endif
-  smartdisplay_lcd_set_backlight(BB_TFT_INTENSITY);
+  smartdisplay_lcd_set_backlight((float)(config.getBacklight() / 100.0));
   // set UI components from config
 
   // set the values of the sliders
   lv_slider_set_value(ui_SliderConfigServoClosed,config.getServoClose(),LV_ANIM_OFF);
   lv_slider_set_value(ui_SliderConfigServoOpen,config.getServoOpen(),LV_ANIM_OFF);
   lv_slider_set_value(ui_SliderConfigTapDuration,config.getTapDuration(),LV_ANIM_OFF);
-  
+  lv_slider_set_value(ui_SliderConfigBacklight,config.getBacklight(),LV_ANIM_OFF);
+
   // set the current values of the labels
   lv_label_set_text_fmt(ui_LabelConfigServoClosed,"%d",config.getServoClose());
   lv_label_set_text_fmt(ui_LabelConfigServoOpen,"%d",config.getServoOpen());
   lv_label_set_text_fmt(ui_LabelConfigTapDuration,"%d",config.getTapDuration());
+  lv_label_set_text_fmt(ui_LabelConfigBacklight,"%d",config.getBacklight());
 
   // set wifi configuration and device id
   lv_textarea_set_text(ui_TextAreaConfigSSID,config.getWiFiSSID());

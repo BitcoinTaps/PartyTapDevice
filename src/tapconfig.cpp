@@ -13,6 +13,7 @@
 #define PARTYTAP_CFG_PIN "pin"
 #define PARTYTAP_CFG_TAP_DURATAION "duration"
 #define PARTYTAP_CFG_MODE "mode"
+#define PARTYTAP_CFG_BACKLIGHT "backlight"
 
 TapConfig::TapConfig() {
     this->pin = String(CONFIG_PIN);
@@ -24,6 +25,7 @@ TapConfig::TapConfig() {
     this->wifi_pwd = "";
     this->tap_duration = 5000;
     this->operatingmode = MODE_ONLINE;
+    this->backlight = 100;
 }
 
 bool TapConfig::load() {
@@ -63,6 +65,8 @@ bool TapConfig::load() {
             this->tap_duration = obj["value"].as<int>();
         } else if ( name == PARTYTAP_CFG_MODE ) {
             this->operatingmode = obj["value"].as<int>();
+        } else if ( name == PARTYTAP_CFG_BACKLIGHT ) {
+            this->backlight = obj["value"].as<int>();
         }
       }
 
@@ -94,6 +98,8 @@ bool TapConfig::save() {
     doc[7]["value"] = this->tap_duration;
     doc[8]["name"] = PARTYTAP_CFG_MODE;
     doc[8]["value"] = this->operatingmode;
+    doc[9]["name"] = PARTYTAP_CFG_BACKLIGHT;
+    doc[9]["value"] = this->backlight;
 
     String output = "";
     serializeJson(doc, output);
@@ -133,6 +139,14 @@ void TapConfig::setServoClose(int i) {
 
 void TapConfig::setTapDuration(int i) {
     this->tap_duration = i;
+}
+
+void TapConfig::setBacklight(int i) {
+    this->backlight = i;
+}
+
+int TapConfig::getBacklight() {
+    return this->backlight;
 }
 
 const char *TapConfig::getWiFiSSID() {

@@ -34,7 +34,7 @@ void wantBierClicked(int item);
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost);
 
-void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration);
+void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration, int32_t backlight);
 
 bool getWifiStatus();
 

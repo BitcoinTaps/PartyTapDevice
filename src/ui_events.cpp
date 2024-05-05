@@ -183,7 +183,8 @@ void ButtonConfigSaveClicked(lv_event_t * e)
 	int32_t servoClosed = lv_slider_get_value(ui_SliderConfigServoClosed);
 	int32_t servoOpen = lv_slider_get_value(ui_SliderConfigServoOpen);
 	int32_t tapDuration = lv_slider_get_value(ui_SliderConfigTapDuration);
-	saveTuning(servoClosed,servoOpen,tapDuration);	
+	int32_t backlight = lv_slider_get_value(ui_SliderConfigBacklight);
+	saveTuning(servoClosed,servoOpen,tapDuration, backlight);	
 }
 
 void ButtonScreenBierFlowingClicked(lv_event_t * e)
@@ -229,6 +230,7 @@ void ButtonMainEnterPINClicked(lv_event_t *e) {
 
 void ButtonAboutConfigClicked(lv_event_t *e) {
 	entered_pin = "";
+	payment_pin = "";
 	toConfigPage();
 }
 

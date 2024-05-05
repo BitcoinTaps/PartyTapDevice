@@ -18,6 +18,7 @@ class TapConfig {
         String pin;
         int tap_duration;
         int operatingmode;
+        int backlight;
     public:
         TapConfig();
 
@@ -33,11 +34,13 @@ class TapConfig {
         void setPIN(const char *s);
         void setTapDuration(int i);
         void setOperatingMode(int i);
+        void setBacklight(int i);
 
         const char *getWiFiSSID();
         const char *getWiFiPWD();
         int getServoOpen();
         int getServoClose();
+        int getBacklight();
         const char *getLNbitsHost();
         const char *getDeviceID();
         const char *getPIN();    
