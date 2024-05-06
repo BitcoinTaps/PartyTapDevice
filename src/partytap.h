@@ -12,6 +12,8 @@ extern "C" {
 
 extern String payment_pin;
 
+void setBacklight(int i);
+
 void changeOperatingMode(const char *mode);
 
 void doUpdate();

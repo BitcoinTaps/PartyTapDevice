@@ -237,3 +237,8 @@ void ButtonAboutConfigClicked(lv_event_t *e) {
 void ButtonConfigFirmwareUpdateClicked(lv_event_t * e) {
 	doUpdate();
 }
+
+void SliderMainBacklightChanged(lv_event_t *e ) {
+	int32_t backlight = lv_slider_get_value(ui_SliderMainBacklight);
+	setBacklight(backlight);	
+}

@@ -229,7 +229,7 @@ void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration,int3
   config.setBacklight(backlight);
   config.save();
 
-  smartdisplay_lcd_set_backlight((float)(backlight / 100.0));
+  setBacklight(config.getBacklight());
 }
 
 void updatePIN(const char *pin) {
@@ -442,6 +442,7 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
     lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
     lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
+    lv_slider_set_value(ui_SliderMainBacklight, config.getBacklight(), LV_ANIM_OFF);
     lv_disp_load_scr(ui_ScreenMain);	
     lv_label_set_text(ui_LabelHeaderMain,productConfig.getProduct(selectedItem)->getPayString());
     lv_obj_set_x(ui_ButtonMainAbout, 0);
@@ -622,6 +623,7 @@ void wantBierClicked(int item) {
       lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
       lv_qrcode_update(ui_QrcodeLnurl, charLnurl, strlen(charLnurl));
       lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
+      lv_slider_set_value(ui_SliderMainBacklight, config.getBacklight(), LV_ANIM_OFF);
       lv_disp_load_scr(ui_ScreenMain);	
     }
     expireInvoiceTask.restartDelayed(TASK_SECOND * 60);
@@ -884,6 +886,17 @@ void nfcReadSucces(int len,const char *data ) {
   webSocket.sendTXT(wsmessage);
 }
 
+void setBacklight(int i) {
+  if ( i < 1) {
+    i = 1;
+  }
+  if ( i > 100 ) {
+    i = 100;
+  }
+  config.setBacklight(i);
+  smartdisplay_lcd_set_backlight((float)(i / 100.0));
+}
+
 
 void setup()
 {
@@ -910,7 +923,7 @@ void setup()
 #ifdef BOARD_HAS_RGB_LED
   smartdisplay_led_set_rgb(0,0,0);
 #endif
-  smartdisplay_lcd_set_backlight((float)(config.getBacklight() / 100.0));
+  setBacklight(config.getBacklight());
   // set UI components from config
 
   // set the values of the sliders

@@ -35,6 +35,8 @@ lv_obj_t * ui_Label12;
 lv_obj_t * ui_PanelMainMessage;
 lv_obj_t * ui_LabelMainMessage;
 lv_obj_t * ui_QrcodeLnurl;
+lv_obj_t * ui_SliderMainBacklight;
+void ui_event_SliderMainBacklight(lv_event_t * e);
 void ui_event_Button1(lv_event_t * e);
 lv_obj_t * ui_Button1;
 lv_obj_t * ui_Label15;
@@ -538,13 +540,21 @@ void ui_event_ButtonConfigUpdate(lv_event_t * e)
         ButtonConfigFirmwareUpdateClicked(e);
     }
 }
+void ui_event_SliderMainBacklight(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t * target = lv_event_get_target(e);
+    if(event_code == LV_EVENT_VALUE_CHANGED) {
+        SliderMainBacklightChanged(e);
+    }
+}
 
 void ui_event_SliderConfigServoClosed(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_VALUE_CHANGED) {
-        _ui_slider_set_text_value(ui_LabelConfigServoClosed, target, "", "");
+        _ui_slider_set_text_value(ui_LabelConfigServoClosed, target, (char *)"", (char *)"");
     }
 }
 void ui_event_SliderConfigServoOpen(lv_event_t * e)
@@ -552,7 +562,7 @@ void ui_event_SliderConfigServoOpen(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_VALUE_CHANGED) {
-        _ui_slider_set_text_value(ui_LabelConfigServoOpen, target, "", "");
+        _ui_slider_set_text_value(ui_LabelConfigServoOpen, target, (char *)"", (char *)"");
     }
 }
 
@@ -578,7 +588,7 @@ void ui_event_SliderConfigTapDuration(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_VALUE_CHANGED) {
-        _ui_slider_set_text_value(ui_LabelConfigTapDuration, target, "", "");
+        _ui_slider_set_text_value(ui_LabelConfigTapDuration, target, (char *)"", (char *)"");
     }
 }
 void ui_event_SliderConfigBacklight(lv_event_t * e)
@@ -586,7 +596,7 @@ void ui_event_SliderConfigBacklight(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_VALUE_CHANGED) {
-        _ui_slider_set_text_value(ui_LabelConfigBacklight, target, "", "");
+        _ui_slider_set_text_value(ui_LabelConfigBacklight, target, (char *)"", (char *)"");
     }
 }
 void ui_event_ButtonConfigSave(lv_event_t * e)
@@ -853,9 +863,28 @@ void ui_ScreenMain_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelMainMessage, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelMainMessage, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    // brightness slider
+    ui_SliderMainBacklight = lv_slider_create(ui_ScreenMain);
+    lv_slider_set_range(ui_SliderMainBacklight, 5, 100);
+    lv_obj_set_width(ui_SliderMainBacklight, 10);
+    lv_obj_set_height(ui_SliderMainBacklight, 240);
+    lv_obj_set_x(ui_SliderMainBacklight, -10);
+    lv_obj_set_y(ui_SliderMainBacklight, -30);
+    lv_obj_set_align(ui_SliderMainBacklight, LV_ALIGN_RIGHT_MID);
+    lv_obj_set_style_bg_color(ui_SliderMainBacklight, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderMainBacklight, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_SliderMainBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_SliderMainBacklight, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_SliderMainBacklight, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_bg_color(ui_SliderMainBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_INDICATOR | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderMainBacklight, 255, LV_PART_INDICATOR | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_bg_color(ui_SliderMainBacklight, lv_color_hex(BB_BGCOLOR), LV_PART_KNOB | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_SliderMainBacklight, 255, LV_PART_KNOB | LV_STATE_DEFAULT);
 
 
-
+    lv_obj_add_event_cb(ui_SliderMainBacklight,ui_event_SliderMainBacklight, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonMainEnterPIN,ui_event_ButtonMainEnterPIN, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonMainAbout, ui_event_ButtonMainAbout, LV_EVENT_ALL, NULL);
 
