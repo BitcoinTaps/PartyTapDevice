@@ -431,7 +431,7 @@ void showInvoice(DynamicJsonDocument *doc)
   payment_hash = (*doc)["payment_hash"].as<const char *>();
 
   // Start countdown to expire invoice
-  expireInvoiceTask.restartDelayed(TASK_SECOND * 60);
+  expireInvoiceTask.restartDelayed(TASK_SECOND * 120);
   if ( sensact->isNFCAvailable() ) {
     checkNFCPaymentTask.restart();
   }
@@ -626,7 +626,7 @@ void wantBierClicked(int item) {
       lv_slider_set_value(ui_SliderMainBacklight, config.getBacklight(), LV_ANIM_OFF);
       lv_disp_load_scr(ui_ScreenMain);	
     }
-    expireInvoiceTask.restartDelayed(TASK_SECOND * 60);
+    expireInvoiceTask.restartDelayed(TASK_SECOND * 120);
   }
 
 
@@ -956,7 +956,6 @@ void setup()
   );
 
   // initialize I2C
-#if defined(TAP_I2C_SCL) && defined(TAP_I2C_SDA) && defined (TAP_I2C_BUS)
   sensact = new Sensact(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);
   sensact->init();
 
@@ -965,7 +964,6 @@ void setup()
   sensact->initNFC();
     
   // search for I2C servo
-#ifdef ESP32_3248S035C
 #ifdef DEBUG
   Serial.println("Initialising servo");
 #endif
@@ -980,17 +978,7 @@ void setup()
 #endif
     sensact->initServo(TAP_SERVO_PIN);
   }
-#else
-  if ( ! sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN) ) {
-    sensact->initServo(TAP_SERVO_PIN);
-  }
-#endif
 
-#else
-  sensact = new Sensact();
-  sensact->init();
-  sensact->initServo(TAP_SERVO_PIN);
-#endif
 
   if (( sensact->isNFCAvailable()) && (sensact->isServoAvailable() )) {
     setUIStatus("Initialized with NFC","Initialized with NFC");
