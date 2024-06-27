@@ -33,6 +33,11 @@ bool Sensact::init() {
     }
 }
 
+bool Sensact::initSwitch(int pin) {
+    digitalWrite(pin,OUTPUT);
+    return true;
+}
+
 bool Sensact::initServo(int pin) {
     if ( this->i2c_tap_servo != NULL ) {
 #ifdef DEBUG
@@ -190,6 +195,15 @@ bool Sensact::initNFC() {
     }
     return true;
 }
+
+void Sensact::openSwitch(int pin) {
+    digitalWrite(pin,HIGH);
+}
+
+void Sensact::closeSwitch(int pin) {
+    digitalWrite(pin,LOW);
+}
+
 
 void Sensact::writeServo(int deg) {
     if ( this->i2c_tap_servo ) {

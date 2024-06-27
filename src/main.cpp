@@ -18,6 +18,8 @@
 #include <Adafruit_PN532_NTAG424.h>
 #include <bitcoin.h>
 
+#define TAP_SWITCH 1
+
 std::recursive_mutex lvgl_mutex;
 
 #define STR_INVOICE    PSTR("invoice")
@@ -204,11 +206,19 @@ void checkUpdate() {
 }
 
 void beerClose() {
+#ifdef TAP_SWITCH
+  sensact->closeSwitch(TAP_SERVO_PIN);
+#else
   sensact->writeServo(config.getServoClose());
+#endif
 }
 
 void beerOpen() {
+#ifdef TAP_SWITCH
+  sensact->openSwitch(TAP_SERVO_PIN);
+#else
   sensact->writeServo(config.getServoOpen());
+#endif
 }
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost) {
@@ -961,13 +971,13 @@ void setup()
 
   // search NFC sensor
   setUIStatus("Detecting NFC","Detecting NFC");
-  sensact->initNFC();
+//  sensact->initNFC();
     
   // search for I2C servo
 #ifdef DEBUG
   Serial.println("Initialising servo");
 #endif
-  sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
+//  sensact->initServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
   if ( sensact->isServoAvailable() ) {
 #ifdef DEBUG
     Serial.println("Servo configured");
@@ -976,7 +986,11 @@ void setup()
 #ifdef DEBUG
     Serial.println("Using conventional servo");
 #endif
+#ifdef TAP_SWITCH
+    sensact->initSwitch(TAP_SERVO_PIN);
+#else
     sensact->initServo(TAP_SERVO_PIN);
+#endif
   }
 
 

@@ -26,7 +26,8 @@ class Sensact {
         
         // Tap servo is either I2C or regular
         I2CServo *i2c_tap_servo = NULL;
-        Servo *tap_servo = NULL;
+        Servo *tap_servo = NULL;   
+
 
         // NFC device is through I2C
         Adafruit_PN532 *pn532 = NULL;
@@ -47,6 +48,12 @@ class Sensact {
 
         // initialize an I2C servo
         bool initServo(int address, int pin);
+
+        // init switch on PIN
+        bool initSwitch(int pin);
+
+        void openSwitch(int pin);
+        void closeSwitch(int pin);
 
         // return true when servo is available
         bool isServoAvailable();
