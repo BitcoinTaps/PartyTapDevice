@@ -31,30 +31,33 @@ void _ui_label_set_property(lv_obj_t * target, int id, char * val)
 }
 
 
+/*
 void _ui_roller_set_property(lv_obj_t * target, int id, int val)
 {
     if(id == _UI_ROLLER_PROPERTY_SELECTED_WITH_ANIM) lv_roller_set_selected(target, val, LV_ANIM_ON);
     if(id == _UI_ROLLER_PROPERTY_SELECTED) lv_roller_set_selected(target, val, LV_ANIM_OFF);
 }
+*/
 
+/*
 void _ui_slider_set_property(lv_obj_t * target, int id, int val)
 {
     if(id == _UI_SLIDER_PROPERTY_VALUE_WITH_ANIM) lv_slider_set_value(target, val, LV_ANIM_ON);
     if(id == _UI_SLIDER_PROPERTY_VALUE) lv_slider_set_value(target, val, LV_ANIM_OFF);
 }
-
+*/
 
 void _ui_screen_change(lv_obj_t * target, lv_scr_load_anim_t fademode, int spd, int delay)
 {
     lv_scr_load_anim(target, fademode, spd, delay, false);
 }
 
-void _ui_arc_increment(lv_obj_t * target, int val)
-{
-    int old = lv_arc_get_value(target);
-    lv_arc_set_value(target, old + val);
-    lv_event_send(target, LV_EVENT_VALUE_CHANGED, 0);
-}
+// void _ui_arc_increment(lv_obj_t * target, int val)
+// {
+//     int old = lv_arc_get_value(target);
+//     lv_arc_set_value(target, old + val);
+//     lv_event_send(target, LV_EVENT_VALUE_CHANGED, 0);
+// }
 
 void _ui_bar_increment(lv_obj_t * target, int val, int anm)
 {
@@ -62,12 +65,13 @@ void _ui_bar_increment(lv_obj_t * target, int val, int anm)
     lv_bar_set_value(target, old + val, anm);
 }
 
-void _ui_slider_increment(lv_obj_t * target, int val, int anm)
-{
-    int old = lv_slider_get_value(target);
-    lv_slider_set_value(target, old + val, anm);
-    lv_event_send(target, LV_EVENT_VALUE_CHANGED, 0);
-}
+
+//void _ui_slider_increment(lv_obj_t * target, int val, int anm)
+//{
+//     int old = lv_slider_get_value(target);
+//     lv_slider_set_value(target, old + val, anm);
+//     lv_event_send(target, LV_EVENT_VALUE_CHANGED, 0);
+// }
 
 void _ui_keyboard_set_target(lv_obj_t * keyboard, lv_obj_t * textarea)
 {
@@ -169,19 +173,19 @@ int32_t _ui_anim_callback_get_image_angle(lv_anim_t * a)
     return lv_img_get_angle((lv_obj_t *)a->user_data);
 }
 
-void _ui_arc_set_text_value(lv_obj_t * trg, lv_obj_t * src, char * prefix, char * postfix)
-{
-    char buf[_UI_TEMPORARY_STRING_BUFFER_SIZE];
-    lv_snprintf(buf, sizeof(buf), "%s%d%s", prefix, (int)lv_arc_get_value(src), postfix);
-    lv_label_set_text(trg, buf);
-}
+// void _ui_arc_set_text_value(lv_obj_t * trg, lv_obj_t * src, char * prefix, char * postfix)
+// {
+//     char buf[_UI_TEMPORARY_STRING_BUFFER_SIZE];
+//     lv_snprintf(buf, sizeof(buf), "%s%d%s", prefix, (int)lv_arc_get_value(src), postfix);
+//     lv_label_set_text(trg, buf);
+// }
 
-void _ui_slider_set_text_value(lv_obj_t * trg, lv_obj_t * src, char * prefix, char * postfix)
-{
-    char buf[_UI_TEMPORARY_STRING_BUFFER_SIZE];
-    lv_snprintf(buf, sizeof(buf), "%s%d%s", prefix, (int)lv_slider_get_value(src), postfix);
-    lv_label_set_text(trg, buf);
-}
+// void _ui_slider_set_text_value(lv_obj_t * trg, lv_obj_t * src, char * prefix, char * postfix)
+// {
+//     char buf[_UI_TEMPORARY_STRING_BUFFER_SIZE];
+//     lv_snprintf(buf, sizeof(buf), "%s%d%s", prefix, (int)lv_slider_get_value(src), postfix);
+//     lv_label_set_text(trg, buf);
+// }
 void _ui_checked_set_text_value(lv_obj_t * trg, lv_obj_t * src, char * txt_on, char * txt_off)
 {
     if(lv_obj_has_state(src, LV_STATE_CHECKED)) lv_label_set_text(trg, txt_on);

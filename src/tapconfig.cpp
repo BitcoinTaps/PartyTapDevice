@@ -14,6 +14,8 @@
 #define PARTYTAP_CFG_TAP_DURATAION "duration"
 #define PARTYTAP_CFG_MODE "mode"
 #define PARTYTAP_CFG_BACKLIGHT "backlight"
+#define PARTYTAP_CFG_CONTROL_MODE "control_mode"
+
 
 TapConfig::TapConfig() {
     this->pin = String(CONFIG_PIN);
@@ -24,8 +26,9 @@ TapConfig::TapConfig() {
     this->wifi_ssid = "";
     this->wifi_pwd = "";
     this->tap_duration = 5000;
-    this->operatingmode = MODE_ONLINE;
+    this->paymentMode = PAYMENT_MODE_ONLINE;
     this->backlight = 100;
+    this->controlMode = CONTROL_MODE_NONE;
 }
 
 bool TapConfig::load() {
@@ -64,7 +67,9 @@ bool TapConfig::load() {
         } else if ( name == PARTYTAP_CFG_TAP_DURATAION ) {
             this->tap_duration = obj["value"].as<int>();
         } else if ( name == PARTYTAP_CFG_MODE ) {
-            this->operatingmode = obj["value"].as<int>();
+            this->paymentMode = obj["value"].as<int>();
+        } else if ( name == PARTYTAP_CFG_CONTROL_MODE ) {
+            this->controlMode = obj["value"].as<int>();
         } else if ( name == PARTYTAP_CFG_BACKLIGHT ) {
             this->backlight = obj["value"].as<int>();
         }
@@ -97,9 +102,11 @@ bool TapConfig::save() {
     doc[7]["name"] = PARTYTAP_CFG_TAP_DURATAION;
     doc[7]["value"] = this->tap_duration;
     doc[8]["name"] = PARTYTAP_CFG_MODE;
-    doc[8]["value"] = this->operatingmode;
+    doc[8]["value"] = this->paymentMode;
     doc[9]["name"] = PARTYTAP_CFG_BACKLIGHT;
     doc[9]["value"] = this->backlight;
+    doc[10]["name"] = PARTYTAP_CFG_CONTROL_MODE;
+    doc[10]["value"] = this->controlMode;
 
     String output = "";
     serializeJson(doc, output);
@@ -181,10 +188,18 @@ int TapConfig::getTapDuration() {
     return this->tap_duration;
 }
 
-void TapConfig::setOperatingMode(int i) {
-    this->operatingmode = i;
+void TapConfig::setPaymentMode(int i) {
+    this->paymentMode = i;
 }
 
-int TapConfig::getOperatingMode() {
-    return this->operatingmode;
+int TapConfig::getPaymentMode() {
+    return this->paymentMode;
+}
+
+void TapConfig::setControlMode(int i) {
+    this->controlMode = i;
+}
+
+int TapConfig::getControlMode() {
+    return this->controlMode;
 }

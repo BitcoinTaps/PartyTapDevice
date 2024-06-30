@@ -4,21 +4,8 @@ Sensact::Sensact() {
     this->_wire = NULL;
 }
 
-Sensact::Sensact(int sda, int scl, int bus) {
-    this->_bus = bus;
-    this->_scl = scl;
-    this->_sda = sda;
-
+bool Sensact::initI2C(int sda, int scl, int bus) {
     this->_wire = new TwoWire(bus);
-}
-
-bool Sensact::init() {    
-    if ( this->_wire == NULL ) {
-#ifdef DEBUG
-        Serial.println("[Sensact] Initialized without I2C support");
-#endif
-        return true;
-    }
 
     if (this->_wire->begin(TAP_I2C_SDA, TAP_I2C_SCL) ) {
 #ifdef DEBUG
@@ -31,16 +18,10 @@ bool Sensact::init() {
 #endif 
         return false;
     }
+
 }
 
 bool Sensact::initServo(int pin) {
-    if ( this->i2c_tap_servo != NULL ) {
-#ifdef DEBUG
-        Serial.println("[Sensact] Servo already initialized on I2C bus");
-#endif 
-        return false;
-    }
-
     if ( this->tap_servo != NULL ) {
 #ifdef DEBUG
         Serial.println("[Sensact] Servo already initialized");
@@ -56,6 +37,21 @@ bool Sensact::initServo(int pin) {
 #endif 
     return true;
 }
+
+bool Sensact::initRelay(int pin) {
+    this->_relay_pin = pin;
+
+    pinMode(this->_relay_pin,OUTPUT);
+#ifdef DEBUG
+    Serial.println("[Sensact] Relay initialized");
+#endif 
+    return true;
+}
+
+void Sensact::writeRelay(int i) {
+    digitalWrite(this->_relay_pin,i);
+}
+
 
 bool Sensact::scanI2CAddress(int address) {
     if ( this->_wire == NULL ) {
@@ -88,7 +84,45 @@ bool Sensact::scanI2CAddress(int address) {
     }
 }
 
-bool Sensact::initServo(int address, int pin) {
+bool Sensact::initI2CRelay(int address, int pin) {
+    if ( this->i2c_tap_servo != NULL ) {
+#ifdef DEBUG
+        Serial.println("[Sensact] relay already initialized");
+#endif
+        return false;
+    }
+
+    if ( ! this->scanI2CAddress(address) ) {
+#ifdef DEBUG
+        Serial.println("[Sensact] relay not found on bus");
+#endif
+        return false;
+    } else {
+#ifdef DEBUG
+        Serial.println("[Sensact] relay detected on bus");
+#endif
+    }
+    
+    this->i2c_tap_servo = new I2CServo(this->_wire,address);
+    
+    // start in relay mode
+    if ( this->i2c_tap_servo->relay(pin) ) {
+#ifdef DEBUG
+        Serial.println("[Sensact] relay attached");
+#endif
+        return true;
+    }
+
+    // on failure, delete servo
+#ifdef DEBUG
+    Serial.println("[Sensact] Failed to initialize tap servo on I2C");
+#endif
+    delete this->i2c_tap_servo;
+    this->i2c_tap_servo = NULL;
+    return false;
+}
+
+bool Sensact::initI2CServo(int address, int pin) {
     if ( this->i2c_tap_servo != NULL ) {
 #ifdef DEBUG
         Serial.println("[Sensact] servo already initialized");
@@ -191,11 +225,9 @@ bool Sensact::initNFC() {
     return true;
 }
 
-void Sensact::writeServo(int deg) {
+void Sensact::writeI2CServo(int deg) {
     if ( this->i2c_tap_servo ) {
         this->i2c_tap_servo->write(deg);
-    } else if ( this->tap_servo ) {
-        this->tap_servo->write(deg);
 #ifdef DEBUG
     } else {
         Serial.println("[Sensact] no servo available for writing");
@@ -203,24 +235,26 @@ void Sensact::writeServo(int deg) {
     }
 }
 
-bool Sensact::isServoAvailable() {
+void Sensact::writeI2CRelay(int i) {
     if ( this->i2c_tap_servo ) {
-        return true;
+        this->i2c_tap_servo->write(i);
+#ifdef DEBUG
+    } else {
+        Serial.println("[Sensact] no relay available for writing");
+#endif
     }
+}
+
+
+void Sensact::writeServo(int deg) {
     if ( this->tap_servo ) {
-        return true;
+        this->tap_servo->write(deg);
+#ifdef DEBUG
+    } else {
+        Serial.println("[Sensact] no servo available for writing");
+#endif
     }
-    return false;    
 }
-
-bool Sensact::isNFCAvailable() {
-    if ( this->pn532 ) {
-        return true;
-    }
-    return false;
-}
-
-
 
 bool Sensact::readNFC(int timeout,void (*cb)(int), void (*result)(int,const char *)) {
     uint8_t uid[] = {0, 0, 0, 0, 0, 0, 0}; 
@@ -289,4 +323,11 @@ bool Sensact::readNFC(int timeout,void (*cb)(int), void (*result)(int,const char
     result(bytesread,(const char *)this->nfcbuffer);
     return true;
  
+}
+
+bool Sensact::isNFCAvailable() {
+    if ( this->pn532 ) {
+        return true;
+    }
+    return false;
 }

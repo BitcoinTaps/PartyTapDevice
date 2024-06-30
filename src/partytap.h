@@ -12,9 +12,9 @@ extern "C" {
 
 extern String payment_pin;
 
-void setBacklight(int i);
+void setControlMode(const char *mode);
 
-void changeOperatingMode(const char *mode);
+void setPaymentMode(const char *mode);
 
 void doUpdate();
 
@@ -24,9 +24,11 @@ void handlePINResult(const char *pin);
 
 void updatePIN(const char *pin);
 
-void beerOpen();
+void beerStop();
 
-void beerClose();
+void beerOpen(int i);
+
+void beerClose(int i);
 
 void beerScreen();
 
@@ -36,7 +38,7 @@ void wantBierClicked(int item);
 
 void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost);
 
-void saveTuning(int32_t servoClosed, int32_t servoOpen, int32_t tapDuration, int32_t backlight);
+void saveTuning(int32_t servoClosed, int32_t servoOpen);
 
 bool getWifiStatus();
 

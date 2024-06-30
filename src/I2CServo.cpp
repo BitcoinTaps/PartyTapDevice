@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+
+
 I2CServo::I2CServo(TwoWire *wire, int address) {
     this->_wire = wire;    
     this->_address = address;   
@@ -50,18 +52,28 @@ bool I2CServo::sendCommand(int cmd) {
 }
 
 
-bool I2CServo::write(int angle) {
-    return this->sendCommand(SERVO_ANGLE,angle,1);
+bool I2CServo::write(int i) {
+    return this->sendCommand(SERVO_ANGLE,i,1);
 }
 
 bool I2CServo::attach(int pin) {
     this->_pin = pin;
-    bool result = this->sendCommand(SERVO_PIN,pin,1);
+    bool result = this->sendCommand(SERVO_ATTACH,pin,1);
 #ifdef DEBUG
     Serial.printf("[I2CServo] attach result = %d\n",result);
 #endif
     return result;
 }
+
+bool I2CServo::relay(int pin) {
+    this->_pin = pin;
+    bool result = this->sendCommand(SERVO_RELAY,pin,1);
+#ifdef DEBUG
+    Serial.printf("[I2CServo] attach result = %d\n",result);
+#endif
+    return result;
+}
+
 
 bool I2CServo::detach() {
     return this->sendCommand(SERVO_DETACH);

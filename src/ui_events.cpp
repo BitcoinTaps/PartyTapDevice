@@ -22,59 +22,12 @@ void addToPIN(int digit) {
     lv_label_set_text(ui_LabelPINValue,hidePIN.c_str());
 }
 
-void ButtonPinOneClicked(lv_event_t * e)
+void ButtonPinNumberClicked(lv_event_t * e)
 {
-	// Your code here
-	addToPIN(1);
+	// Your code here	
+	addToPIN(int(e->user_data));
 }
 
-void ButtonPinTwoClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(2);
-}
-
-void ButtonPinThreeClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(3);
-}
-
-void ButtonPinFourClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(4);
-}
-
-void ButtonPinFiveClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(5);
-}
-
-void ButtonPinSixClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(6);
-}
-
-void ButtonPinSevenClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(7);
-}
-
-void ButtonPinEightClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(8);
-}
-
-void ButtonPinNineClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(9);
-}
 
 void ButtonPinCancelClicked(lv_event_t * e)
 {
@@ -86,18 +39,8 @@ void ButtonPinCancelClicked(lv_event_t * e)
 	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 }
 
-void ButtonPinZeroClicked(lv_event_t * e)
-{
-	// Your code here
-	addToPIN(0);
-}
 
-void DropdownConfigOperatingModeChanged(lv_event_t *e) 
-{
-	char buf[20];
-	lv_dropdown_get_selected_str(ui_DropdownConfigOperatingMode, buf, sizeof(buf));
-	changeOperatingMode(buf);
-}
+
 
 void ButtonPinOKClicked(lv_event_t * e)
 {
@@ -106,23 +49,29 @@ void ButtonPinOKClicked(lv_event_t * e)
 	entered_pin = "";
 }
 
-void ButtonConfigTunerClicked(lv_event_t * e)
+void ButtonConfigDoneClicked(lv_event_t * e)
 {
-	lv_disp_load_scr(ui_ScreenConfigAdvanced);
-	if ( false ) {
-		beginOTA();
-		/// UNREACHABLE CODE
-	}
-}
+	char buf[20];
 
-void ButtonConfigConnectClicked(lv_event_t * e)
-{
-	// Your code here
 	const char *ssid = lv_textarea_get_text(ui_TextAreaConfigSSID);
-	const char *pwd = lv_textarea_get_text(ui_TextAreaWifiPassword);
+	const char *pwd = lv_textarea_get_text(ui_TextAreaConfigWifiPassword);
 	const char *deviceid = lv_textarea_get_text(ui_TextAreaConfigDeviceID);
-	const char *cfgserver = lv_textarea_get_text(ui_TextAreaConfigHost);
+	const char *cfgserver = lv_textarea_get_text(ui_TextAreaConfigLNbitsHost);
+	
+	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
+	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
+
+	lv_dropdown_get_selected_str(ui_DropdownConfigPaymentMode, buf, sizeof(buf));
+	setPaymentMode(buf);
+
+	lv_dropdown_get_selected_str(ui_DropdownConfigControlMode, buf, sizeof(buf));
+	setControlMode(buf);
+
+
+	saveTuning(servoClosed,servoOpen);	
 	connectPartyTap(ssid,pwd,deviceid,cfgserver);
+
+	ESP.restart();
 }
 
 void ButtonOKPINClicked(lv_event_t * e)
@@ -158,7 +107,7 @@ void ButtonOKPINClicked(lv_event_t * e)
 	lv_obj_add_flag(ui_PanelConfigPIN,LV_OBJ_FLAG_HIDDEN);
 }
 
-void ButtoCancelPINClicked(lv_event_t * e)
+void ButtonCancelPINClicked(lv_event_t * e)
 {
 	// Your code here
 	lv_textarea_set_text(ui_TextAreaConfigPINCurrent,"");
@@ -170,26 +119,23 @@ void ButtoCancelPINClicked(lv_event_t * e)
 
 void ButtonConfigCloseClicked(lv_event_t * e)
 {
-	beerClose();
+	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
+	beerClose(servoClosed);
 }
 
 void ButtonConfigOpenClicked(lv_event_t * e)
 {
-	beerOpen();
+	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
+	beerOpen(servoOpen);
 }
 
-void ButtonConfigSaveClicked(lv_event_t * e)
+void ButtonConfigCancelClicked(lv_event_t * e)
 {
-	int32_t servoClosed = lv_slider_get_value(ui_SliderConfigServoClosed);
-	int32_t servoOpen = lv_slider_get_value(ui_SliderConfigServoOpen);
-	int32_t tapDuration = lv_slider_get_value(ui_SliderConfigTapDuration);
-	int32_t backlight = lv_slider_get_value(ui_SliderConfigBacklight);
-	saveTuning(servoClosed,servoOpen,tapDuration, backlight);	
 }
 
 void ButtonScreenBierFlowingClicked(lv_event_t * e)
 {
-	beerClose();
+	beerStop();
 }
 
 
@@ -238,7 +184,3 @@ void ButtonConfigFirmwareUpdateClicked(lv_event_t * e) {
 	doUpdate();
 }
 
-void SliderMainBacklightChanged(lv_event_t *e ) {
-	int32_t backlight = lv_slider_get_value(ui_SliderMainBacklight);
-	setBacklight(backlight);	
-}

@@ -17,6 +17,7 @@
 #define SENSACT_NFC_CB_NTAG424      7
 #define SENSACT_NFC_CB_READING    8
 
+
 class Sensact {
     private:
         int _sda = -1;
@@ -27,6 +28,7 @@ class Sensact {
         // Tap servo is either I2C or regular
         I2CServo *i2c_tap_servo = NULL;
         Servo *tap_servo = NULL;
+        int _relay_pin = 0;
 
         // NFC device is through I2C
         Adafruit_PN532 *pn532 = NULL;
@@ -36,35 +38,44 @@ class Sensact {
         // scan if an I2C address is alive
         bool scanI2CAddress(int address);
     public:
-        // Create with I2C support
-        Sensact(int sda, int scl, int bus);
-
-        // Create without I2C support
+        // Create Sensact in a specific control mode
         Sensact();
 
-        // Initialize 
-        bool init();
+        // init I2C bus
+        bool initI2C(int sda, int scl, int bus);
 
         // initialize an I2C servo
-        bool initServo(int address, int pin);
-
-        // return true when servo is available
-        bool isServoAvailable();
-
-        // return true when NFC is available
-        bool isNFCAvailable();
-        
-        // read an NFC card
-        bool readNFC(int timeout,void (*cb)(int),void (*result)(int,const char *));
+        bool initI2CServo(int address, int pin);
 
         // initialize a regular servo
         bool initServo(int pin);
 
+        // initialize an I2C relay
+        bool initI2CRelay(int address, int pin);
+
+        // initialize a regular relay
+        bool initRelay(int pin);
+
+        // write data to servo
+        void writeI2CServo(int deg);
+
         // write data to servo
         void writeServo(int deg);
 
+        // write data to I2C relay
+        void writeI2CRelay(int i);
+
+        // write data to relay
+        void writeRelay(int i);
+
+        // read an NFC card
+        bool readNFC(int timeout,void (*cb)(int),void (*result)(int,const char *));
+
         // initialize a PN532 NFC sensor
         bool initNFC();
+
+        // returns true if NFC is available
+        bool isNFCAvailable();
 
 };
 
