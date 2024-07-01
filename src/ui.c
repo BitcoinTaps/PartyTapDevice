@@ -1144,7 +1144,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_width(ui_LabelConfigServoClose, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelConfigServoClose, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_LabelConfigServoClose, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_LabelConfigServoClose, "Close");
+    lv_label_set_text(ui_LabelConfigServoClose, "CLOSE");
     lv_obj_set_style_text_color(ui_LabelConfigServoClose, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelConfigServoClose, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelConfigServoClose, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1164,7 +1164,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_width(ui_LabelConfigServoOpen, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelConfigServoOpen, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_LabelConfigServoOpen, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_LabelConfigServoOpen, "Open");
+    lv_label_set_text(ui_LabelConfigServoOpen, "OPEN");
     lv_obj_set_style_text_color(ui_LabelConfigServoOpen, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelConfigServoOpen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelConfigServoOpen, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1309,7 +1309,7 @@ void ui_ScreenConfig_screen_init(void)
 */
 
     ui_ButtonConfigDone = lv_btn_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_ButtonConfigDone, 100);
+    lv_obj_set_width(ui_ButtonConfigDone, 95);
     lv_obj_set_height(ui_ButtonConfigDone, 50);
     lv_obj_set_x(ui_ButtonConfigDone, -10);
     lv_obj_set_y(ui_ButtonConfigDone, -5);
@@ -1329,7 +1329,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelConfigDone, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ButtonConfigCancel = lv_btn_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_ButtonConfigCancel, 100);
+    lv_obj_set_width(ui_ButtonConfigCancel, 95);
     lv_obj_set_height(ui_ButtonConfigCancel, 50);
     lv_obj_set_x(ui_ButtonConfigCancel, 10);
     lv_obj_set_y(ui_ButtonConfigCancel, -5);
@@ -1349,9 +1349,9 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelConfigCancel, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ButtonConfigUpdate = lv_btn_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_ButtonConfigUpdate, 80);
+    lv_obj_set_width(ui_ButtonConfigUpdate, 95);
     lv_obj_set_height(ui_ButtonConfigUpdate, 50);
-    lv_obj_set_x(ui_ButtonConfigUpdate, 10);
+    lv_obj_set_x(ui_ButtonConfigUpdate, 0);
     lv_obj_set_y(ui_ButtonConfigUpdate, -5);
     lv_obj_set_align(ui_ButtonConfigUpdate, LV_ALIGN_BOTTOM_MID);
     lv_obj_add_flag(ui_ButtonConfigUpdate, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
