@@ -2,3 +2,6 @@
 	path = lnbits
 	url = git@github.com:BitcoinTaps/partytap.git
 
+[submodule "boards"]
+	path = boards
+	url = https://github.com/rzeldent/platformio-espressif32-sunton.git
