@@ -448,7 +448,12 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_bg_opa(ui_ScreenAbout, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelHeaderAbout = lv_obj_create(ui_ScreenAbout);
+#ifdef DISPLAY_WIDTH
     lv_obj_set_width(ui_PanelHeaderAbout, DISPLAY_WIDTH);
+#endif
+#ifdef LCD_WIDTH
+    lv_obj_set_width(ui_PanelHeaderAbout, LCD_WIDTH);
+#endif
     lv_obj_set_height(ui_PanelHeaderAbout, 50);
     lv_obj_clear_flag(ui_PanelHeaderAbout, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_PanelHeaderAbout, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
