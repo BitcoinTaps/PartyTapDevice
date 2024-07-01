@@ -134,31 +134,7 @@ void firmwareUpdateError(int err) {
 }
 
 void startFirmwareUpdate() {
-  {
-
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-
-    lv_obj_del(ui_ScreenBierFlowing);
-    lv_obj_del(ui_ScreenConfig);
-    lv_obj_del(ui_ScreenPin);
-    lv_obj_del(ui_ScreenMain);
-  }
-
-  delay(5000);
-
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-
-    // disable buttons and move message panel so that it does not cover the logo
-    lv_obj_set_y(ui_PanelAboutMessage, 120);
-    lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATING FIRMWARE"));
-    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
-    lv_disp_load_scr(ui_ScreenAbout);	  
-  }  
+  delay(1000);
   bDoUpdate = true;
   checkUpdateTask.restartDelayed(2000);
 }
@@ -195,7 +171,9 @@ void doFirmwareUpdate() {
 
 #define FIRMWARE_HOST "firmware.bitcointaps.com"
   snprintf_P(firmware_path, sizeof(firmware_path), PSTR("/partytap/ESP32_3248S035C/%s/firmware_%s.bin"), productConfig.getServerVersion(), productConfig.getServerBranding());
-
+#ifdef DEBUG
+  Serial.printf("Firmware path %s\n",firmware_path);
+#endif
   t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, firmware_path);
   
   if ( ret == HTTP_UPDATE_FAILED ) {
@@ -279,12 +257,6 @@ void toConfigPage()
   if ( sensact->isNFCAvailable() ) {
     checkNFCPaymentTask.disable();
   }
-
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-    lv_disp_load_scr(ui_ScreenPin);	  
-  }
 }
 
 void backToAboutPage()
@@ -296,8 +268,10 @@ void backToAboutPage()
 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenAbout_screen_init();
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
+    lv_obj_del(ui_ScreenBierFlowing);
   }
 }
 
@@ -319,10 +293,12 @@ void beerScreen()
 {
   payment_pin = "";
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  ui_ScreenBierFlowing_screen_init();
   lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 	lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
   lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
 	lv_disp_load_scr(ui_ScreenBierFlowing);	
+  lv_obj_del(ui_ScreenMain);
 }
 
 void beerStart()
@@ -368,8 +344,10 @@ void expireInvoice()
 { 
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenAbout_screen_init();
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenAbout);	  
+    lv_obj_del(ui_ScreenMain);
   }
 
   expireInvoiceTask.disable();
@@ -396,13 +374,15 @@ void showInvoice(DynamicJsonDocument *doc)
   // Update UI
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenMain_screen_init();
     lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
     lv_qrcode_update(ui_QrcodeLnurl, payment_request.c_str(), payment_request.length());
     lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
-    lv_disp_load_scr(ui_ScreenMain);	
     lv_label_set_text(ui_LabelHeaderMain,productConfig.getProduct(selectedItem)->getPayString());
     lv_obj_set_x(ui_ButtonMainAbout, 0);
     lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenMain);	
+    lv_obj_del(ui_ScreenAbout);
   }
 }
 
@@ -410,7 +390,9 @@ void showInvoice(DynamicJsonDocument *doc)
 void wantBierClicked(int item) {
   if ( productConfig.getNumProducts() == 0 ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenPin_screen_init();
     lv_disp_load_scr(ui_ScreenPin);	
+    lv_obj_del(ui_ScreenAbout);
     return;
   }
 
@@ -571,6 +553,7 @@ void wantBierClicked(int item) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
       
+      ui_ScreenMain_screen_init();
       lv_label_set_text(ui_LabelHeaderMain, "PAY FOR YOUR DRINK");
       lv_obj_set_x(ui_ButtonMainAbout, -70);
       lv_obj_set_x(ui_ButtonMainEnterPIN, 70);
@@ -579,7 +562,8 @@ void wantBierClicked(int item) {
       lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
       lv_qrcode_update(ui_QrcodeLnurl, charLnurl, strlen(charLnurl));
       lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
-      lv_disp_load_scr(ui_ScreenMain);	
+      lv_disp_load_scr(ui_ScreenMain);
+      lv_obj_del(ui_ScreenAbout);	
     }
     expireInvoiceTask.restartDelayed(TASK_SECOND * 120);
   }

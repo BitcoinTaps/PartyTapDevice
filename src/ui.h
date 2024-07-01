@@ -8,7 +8,7 @@ extern "C" {
 #include "lvgl.h"
 
 extern lv_obj_t * ui_ScreenAbout;
-extern lv_obj_t * ui_PanelHeaderAbout;
+extern lv_obj_t * ui_PanelAboutHeader;
 extern lv_obj_t * ui_LabelAboutHeader;
 extern lv_obj_t * ui_ImageAbout;
 extern lv_obj_t * ui_LabelAboutStatus;
@@ -20,7 +20,7 @@ extern lv_obj_t * ui_LabelAboutTwo;
 extern lv_obj_t * ui_LabelAboutThree;
 extern lv_obj_t * ui_PanelAboutMessage;
 extern lv_obj_t * ui_LabelAboutMessage;
-void ui_event_ButtonAboutConfig(lv_event_t * e);
+void ui_event_PanelAboutHeader(lv_event_t * e);
 void ui_event_ButtonAboutOne(lv_event_t * e);
 void ui_event_ButtonAboutTwo(lv_event_t * e);
 void ui_event_ButtonAboutThree(lv_event_t * e);
@@ -165,7 +165,7 @@ void ButtonCancelPINClicked(lv_event_t * e);
 void ButtonAboutOneClicked(lv_event_t * e);
 void ButtonAboutTwoClicked(lv_event_t * e);
 void ButtonAboutThreeClicked(lv_event_t * e);
-void ButtonAboutConfigClicked(lv_event_t * e);
+void PanelAboutHeaderClicked(lv_event_t * e);
 
 void ButtonConfigDoneClicked(lv_event_t *e);
 void ButtonConfigCancelClicked(lv_event_t *e);
@@ -176,6 +176,12 @@ void ButtonMainEnterPINClicked(lv_event_t * e);
 
 void ButtonScreenBierFlowingClicked(lv_event_t * e);
 void ButtonBierStartClicked(lv_event_t * e);
+
+void ui_ScreenConfig_screen_init(void);
+void ui_ScreenAbout_screen_init(void);
+void ui_ScreenMain_screen_init(void);
+void ui_ScreenPin_screen_init(void);
+void ui_ScreenBierFlowing_screen_init(void);
 
 
 #ifdef BRANDING_BITCOINTAPS

@@ -33,7 +33,9 @@ void ButtonPinCancelClicked(lv_event_t * e)
 {
 	// Your code here
 	if ( entered_pin.length() == 0 ) {
+		ui_ScreenAbout_screen_init();
 		lv_disp_load_scr(ui_ScreenAbout);		
+		lv_obj_del(ui_ScreenPin);
 	}
 	entered_pin = "";
 	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
@@ -45,6 +47,7 @@ void ButtonPinOKClicked(lv_event_t * e)
 	// if the config PIN is entered, go to config
 	if ( strcmp(entered_pin.c_str(),tapConfig.getPIN()) == 0 ) {
 		entered_pin = "";  
+		ui_ScreenConfig_screen_init();
     	lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
     	lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
     	lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
@@ -56,7 +59,7 @@ void ButtonPinOKClicked(lv_event_t * e)
     	lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
     	lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
   		lv_disp_load_scr(ui_ScreenConfig);	
-		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+		lv_obj_del(ui_ScreenPin);
 		return;
 	}
 
@@ -124,6 +127,7 @@ void ButtonConfigDoneClicked(lv_event_t * e)
 	
 	tapConfig.save();
 
+	lv_obj_del(ui_ScreenConfig);
 
 	restartTap();
 }
@@ -185,12 +189,23 @@ void ButtonConfigOpenClicked(lv_event_t * e)
 
 void ButtonConfigCancelClicked(lv_event_t * e)
 {
+	ui_ScreenAbout_screen_init();
 	lv_disp_load_scr(ui_ScreenAbout);
+	lv_obj_del(ui_ScreenConfig);
 }
 
 void ButtonConfigUpdateClicked(lv_event_t * e)
 {
-	lv_disp_load_scr(ui_ScreenAbout);
+	ui_ScreenAbout_screen_init();
+	lv_obj_set_y(ui_PanelAboutMessage, 120);
+    lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATING FIRMWARE"));
+    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenAbout);	  	
+	lv_obj_del(ui_ScreenConfig);
 	startFirmwareUpdate();
 }
 
@@ -226,14 +241,30 @@ void ButtonMainBackClicked(lv_event_t *e) {
 }
 
 void ButtonMainEnterPINClicked(lv_event_t *e) {
-	entered_pin = "";
 	toConfigPage();
+    entered_pin = "";
+	ui_ScreenPin_screen_init();
+    lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenPin);	  
+	lv_obj_del(ui_ScreenMain);
 }
 
 
-void ButtonAboutConfigClicked(lv_event_t *e) {
+
+
+void PanelAboutHeaderClicked(lv_event_t *e) {
+	// move from About to PIN Screen
+#ifdef DEBUG
+	Serial.println("PanelAboutHeaderClicked");
+#endif
+	toConfigPage();
 	entered_pin = "";
 	payment_pin = "";
-	toConfigPage();
+	ui_ScreenPin_screen_init();
+    lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+    lv_disp_load_scr(ui_ScreenPin);	  
+	lv_obj_del(ui_ScreenAbout);
 }
+
 
