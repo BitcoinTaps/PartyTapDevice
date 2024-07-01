@@ -11,13 +11,16 @@
 #define PRODUCT_CONFIG_AMOUNT "amount"
 #define PRODUCT_CONFIG_CURRENCY "currency"
 
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
 
 ProductConfig::ProductConfig() {
     this->numProducts = 0;
     this->key = "0000111122224444";
 
     // the extension version of the PartyTap extension at the server. If no version is provided, it is assumed that this is the version
-    this->serverVersion = "838644"; 
+    this->serverVersion = STR(FIRMWARE_VERSION); 
+    this->serverBranding = "BitcoinTaps";
 }
 
 int ProductConfig::getNumProducts() {
@@ -52,6 +55,13 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
         this->serverVersion = (*doc)["version"].as<const char *>();
 #ifdef DEBUG
         Serial.printf("[ProductConfig::parse] Server version: '%s'\n",this->serverVersion.c_str());
+#endif
+    }
+
+    if ( doc->containsKey("branding")) {
+        this->serverBranding = (*doc)["branding"].as<const char *>();
+#ifdef DEBUG
+        Serial.printf("[ProductConfig::parse] Server branding: '%s'\n",this->serverBranding.c_str());
 #endif
     }
 
@@ -127,6 +137,9 @@ bool ProductConfig::save() {
     return true;
 }
 
+const char *ProductConfig::getServerBranding() {
+    return this->serverBranding.c_str();
+}
 
 bool ProductConfig::load() {
     File file = LittleFS.open("/switches.json", "r");

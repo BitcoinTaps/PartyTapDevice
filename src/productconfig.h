@@ -12,6 +12,7 @@ class ProductConfig {
         String key;
         TapProduct product[PARTYTAP_CFG_MAX_PRODUCTS];
         String serverVersion;
+        String serverBranding;
     public:
         ProductConfig();
 
@@ -27,6 +28,8 @@ class ProductConfig {
         TapProduct *getProduct(int i);        
 
         const char *getServerVersion();
+
+        const char *getServerBranding();
 };
 
 #endif

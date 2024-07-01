@@ -96,7 +96,9 @@ extern lv_obj_t * ui_LabelConfigDone;
 void ui_event_ButtonConfigCancel(lv_event_t * e);
 extern lv_obj_t * ui_ButtonConfigCancel;
 extern lv_obj_t * ui_LabelConfigCancel;
-
+void ui_event_ButtonConfigUpdate(lv_event_t * e);
+extern lv_obj_t * ui_ButtonConfigUpdate;
+extern lv_obj_t * ui_LabelConfigUpdate;
 
 
 extern lv_obj_t * ui_PanelConfigPIN;
@@ -167,6 +169,7 @@ void ButtonAboutConfigClicked(lv_event_t * e);
 
 void ButtonConfigDoneClicked(lv_event_t *e);
 void ButtonConfigCancelClicked(lv_event_t *e);
+void ButtonConfigUpdateClicked(lv_event_t *e);
 
 void ButtonMainBackClicked(lv_event_t * e);
 void ButtonMainEnterPINClicked(lv_event_t * e);
@@ -175,8 +178,13 @@ void ButtonScreenBierFlowingClicked(lv_event_t * e);
 void ButtonBierStartClicked(lv_event_t * e);
 
 
+#ifdef BRANDING_BITCOINTAPS
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
-LV_IMG_DECLARE(ui_img_instructions);    // Bitcoin Taps logo
+#endif
+#ifdef BRANDING_BEER
+LV_IMG_DECLARE(ui_img_kanhetal256);    // Kan het al logo
+#endif
+LV_IMG_DECLARE(ui_img_instructions);    // Instructions logo
 
 
 // The font was created with the following command

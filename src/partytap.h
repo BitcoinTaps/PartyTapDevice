@@ -2,7 +2,7 @@
 #define _PARTYTAP_H_
 
 #include <Arduino.h>
-
+#include <tapconfig.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,23 +12,13 @@ extern "C" {
 
 extern String payment_pin;
 
-void setControlMode(const char *mode);
+extern TapConfig tapConfig;
 
-void setPaymentMode(const char *mode);
+void tapStop();
 
-void doUpdate();
+void tapOpen(int i);
 
-bool checkConfigPIN(const char *pin);
-
-void handlePINResult(const char *pin);
-
-void updatePIN(const char *pin);
-
-void beerStop();
-
-void beerOpen(int i);
-
-void beerClose(int i);
+void tapClose(int i);
 
 void beerScreen();
 
@@ -36,25 +26,15 @@ void beerStart();
 
 void wantBierClicked(int item);
 
-void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost);
-
-void saveTuning(int32_t servoClosed, int32_t servoOpen);
-
-bool getWifiStatus();
-
 void backToAboutPage();
 
 void toConfigPage();
 
-bool getWebSocketStatus();
-
 void myDelay(uint32_t ms);
 
-void saveConfig();
+void restartTap();
 
-void beginOTA();
-
-void freeBeerClicked();
+void startFirmwareUpdate();
 
 #ifdef __cplusplus
 }

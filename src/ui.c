@@ -352,6 +352,17 @@ void ui_event_ButtonConfigCancel(lv_event_t * e)
     }
 }
 
+void ui_event_ButtonConfigUpdate(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        _ui_flag_modify(ui_PanelConfigPIN, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
+        _ui_flag_modify(ui_KeyboardConfig, LV_OBJ_FLAG_HIDDEN, _UI_MODIFY_FLAG_ADD);
+        ButtonConfigUpdateClicked(e);
+    }
+}
+
+
 void ui_event_TextAreaConfigPINCurrent(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -473,7 +484,12 @@ void ui_ScreenAbout_screen_init(void)
 
     ui_ImageAbout = lv_img_create(ui_ScreenAbout);
 
-    lv_img_set_src(ui_ImageAbout, &ui_img_bitcointaps256);  // kan het al logp
+#ifdef BRANDING_BITCOINTAPS
+    lv_img_set_src(ui_ImageAbout, &ui_img_bitcointaps256);  // BitcoinTaps logo
+#endif
+#ifdef BRANDING_BEER
+    lv_img_set_src(ui_ImageAbout, &ui_img_kanhetal256);  // Kan het Al
+#endif
 
     lv_obj_set_width(ui_ImageAbout, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_ImageAbout, LV_SIZE_CONTENT);    /// 256
@@ -1333,6 +1349,26 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelConfigCancel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelConfigCancel, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_ButtonConfigUpdate = lv_btn_create(ui_ScreenConfig);
+    lv_obj_set_width(ui_ButtonConfigUpdate, 80);
+    lv_obj_set_height(ui_ButtonConfigUpdate, 50);
+    lv_obj_set_x(ui_ButtonConfigUpdate, 10);
+    lv_obj_set_y(ui_ButtonConfigUpdate, -5);
+    lv_obj_set_align(ui_ButtonConfigUpdate, LV_ALIGN_BOTTOM_MID);
+    lv_obj_add_flag(ui_ButtonConfigUpdate, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonConfigUpdate, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonConfigUpdate, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonConfigUpdate, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelConfigUpdate = lv_label_create(ui_ButtonConfigUpdate);
+    lv_obj_set_width(ui_LabelConfigUpdate, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelConfigUpdate, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelConfigUpdate, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelConfigUpdate, "UPDATE");
+    lv_obj_set_style_text_color(ui_LabelConfigUpdate, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelConfigUpdate, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelConfigUpdate, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
     ui_PanelConfigPIN = lv_obj_create(ui_ScreenConfig);
     lv_obj_set_width(ui_PanelConfigPIN, 256);
     lv_obj_set_height(ui_PanelConfigPIN, 256);
@@ -1469,6 +1505,7 @@ void ui_ScreenConfig_screen_init(void)
 
     lv_obj_add_event_cb(ui_ButtonConfigDone, ui_event_ButtonConfigDone, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonConfigCancel, ui_event_ButtonConfigCancel, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonConfigUpdate, ui_event_ButtonConfigUpdate, LV_EVENT_ALL, NULL);
 
     // PIN change panel events
     lv_obj_add_event_cb(ui_TextAreaConfigPINCurrent, ui_event_TextAreaConfigPINCurrent, LV_EVENT_ALL, NULL);

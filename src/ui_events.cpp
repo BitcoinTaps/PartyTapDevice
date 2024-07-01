@@ -39,39 +39,93 @@ void ButtonPinCancelClicked(lv_event_t * e)
 	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 }
 
-
-
-
 void ButtonPinOKClicked(lv_event_t * e)
 {
-	// Your code here
-	handlePINResult(entered_pin.c_str());
-	entered_pin = "";
+	char servo_text[10];
+	// if the config PIN is entered, go to config
+	if ( strcmp(entered_pin.c_str(),tapConfig.getPIN()) == 0 ) {
+		entered_pin = "";  
+    	lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
+    	lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
+    	lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
+    	lv_textarea_set_text(ui_TextAreaConfigDeviceID,tapConfig.getDeviceID());
+    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoClose());
+    	lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
+    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoOpen());
+    	lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
+    	lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
+    	lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
+  		lv_disp_load_scr(ui_ScreenConfig);	
+		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+		return;
+	}
+
+	if ((payment_pin.length() == PAYMENT_PIN_LEN) && (strncmp(entered_pin.c_str(),payment_pin.c_str(),PAYMENT_PIN_LEN) == 0 )) {
+    	Serial.println("PIN correct");
+		entered_pin = "";
+    	payment_pin = "";
+   		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
+    	beerScreen();
+    	return;
+  	}
+ 
+ 	lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");    
 }
 
 void ButtonConfigDoneClicked(lv_event_t * e)
 {
 	char buf[20];
 
-	const char *ssid = lv_textarea_get_text(ui_TextAreaConfigSSID);
-	const char *pwd = lv_textarea_get_text(ui_TextAreaConfigWifiPassword);
-	const char *deviceid = lv_textarea_get_text(ui_TextAreaConfigDeviceID);
-	const char *cfgserver = lv_textarea_get_text(ui_TextAreaConfigLNbitsHost);
-	
-	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
-	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
-
 	lv_dropdown_get_selected_str(ui_DropdownConfigPaymentMode, buf, sizeof(buf));
-	setPaymentMode(buf);
+  	if ( strncasecmp(buf,"online",6) == 0 ) {
+    	tapConfig.setPaymentMode(PAYMENT_MODE_ONLINE);
+  	} else if ( strncasecmp(buf,"offline",7) == 0 ) {
+    	tapConfig.setPaymentMode(PAYMENT_MODE_OFFLINE);
+  	} else if ( strncasecmp(buf,"auto",4) == 0 ) {
+    	tapConfig.setPaymentMode(PAYMENT_MODE_AUTO);
+  	}
 
 	lv_dropdown_get_selected_str(ui_DropdownConfigControlMode, buf, sizeof(buf));
-	setControlMode(buf);
+	if ( strncasecmp(buf,"Servo, Time",11) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_SERVO_TIME);
+  	} else if ( strncasecmp(buf,"Relay, Time",11) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_RELAY_TIME);
+  	} else if ( strncasecmp(buf,"I2C Servo, Time",15) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TIME);
+  	} else if ( strncasecmp(buf,"I2C_Relay, Time",15) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TIME);
+  	} else if ( strncasecmp(buf,"I2C Servo, Ticks",16) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TICKS);
+  	} else if ( strncasecmp(buf,"I2C_Relay, Ticks",16) == 0 ) {
+    	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TICKS);
+  	} else {
+    	tapConfig.setControlMode(CONTROL_MODE_NONE);
+ 	}
+
+	// make config persistemtt
+	const char *ssid = lv_textarea_get_text(ui_TextAreaConfigSSID);
+ 	tapConfig.setWiFiSSID(ssid);
+
+	const char *pwd = lv_textarea_get_text(ui_TextAreaConfigWifiPassword);
+  	tapConfig.setWiFiPWD(pwd);
+
+	const char *deviceid = lv_textarea_get_text(ui_TextAreaConfigDeviceID);
+  	tapConfig.setDeviceID(deviceid);
+
+	const char *lnbitshost = lv_textarea_get_text(ui_TextAreaConfigLNbitsHost);
+  	tapConfig.setLNbitsHost(lnbitshost);
+
+	
+	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
+ 	tapConfig.setServoClose(servoClosed);
+
+	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
+  	tapConfig.setServoOpen(servoOpen);
+	
+	tapConfig.save();
 
 
-	saveTuning(servoClosed,servoOpen);	
-	connectPartyTap(ssid,pwd,deviceid,cfgserver);
-
-	ESP.restart();
+	restartTap();
 }
 
 void ButtonOKPINClicked(lv_event_t * e)
@@ -81,7 +135,7 @@ void ButtonOKPINClicked(lv_event_t * e)
 	const char *newPIN = lv_textarea_get_text(ui_TextAreaConfigPINNew);
 	const char *repeatPIN = lv_textarea_get_text(ui_TextAreaConfigPINRepeat);
 
-	if ( checkConfigPIN(currentPIN) == false ) {	
+	if ( strcmp(tapConfig.getPIN(),currentPIN) != 0 ) {	
 		lv_label_set_text(ui_LabelConfigPINMessage,"Current PIN incorrect");
 		return;
 	}
@@ -96,8 +150,8 @@ void ButtonOKPINClicked(lv_event_t * e)
 		return;	
 	}
 
-	
-	updatePIN(newPIN);
+	tapConfig.setPIN(newPIN);
+	tapConfig.save();
 
 	// Your code here
 	lv_textarea_set_text(ui_TextAreaConfigPINCurrent,"");
@@ -120,22 +174,30 @@ void ButtonCancelPINClicked(lv_event_t * e)
 void ButtonConfigCloseClicked(lv_event_t * e)
 {
 	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
-	beerClose(servoClosed);
+	tapClose(servoClosed);
 }
 
 void ButtonConfigOpenClicked(lv_event_t * e)
 {
 	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
-	beerOpen(servoOpen);
+	tapOpen(servoOpen);
 }
 
 void ButtonConfigCancelClicked(lv_event_t * e)
 {
+	lv_disp_load_scr(ui_ScreenAbout);
 }
+
+void ButtonConfigUpdateClicked(lv_event_t * e)
+{
+	lv_disp_load_scr(ui_ScreenAbout);
+	startFirmwareUpdate();
+}
+
 
 void ButtonScreenBierFlowingClicked(lv_event_t * e)
 {
-	beerStop();
+	tapStop();
 }
 
 
@@ -159,11 +221,6 @@ void ButtonAboutThreeClicked(lv_event_t *e)
 	wantBierClicked(2);
 }
 
-void ButtonFreeClicked(lv_event_t *e)
-{
-	freeBeerClicked();
-}
-
 void ButtonMainBackClicked(lv_event_t *e) {
 	backToAboutPage();
 }
@@ -178,9 +235,5 @@ void ButtonAboutConfigClicked(lv_event_t *e) {
 	entered_pin = "";
 	payment_pin = "";
 	toConfigPage();
-}
-
-void ButtonConfigFirmwareUpdateClicked(lv_event_t * e) {
-	doUpdate();
 }
 

@@ -18,6 +18,9 @@
 #include <Adafruit_PN532_NTAG424.h>
 #include <bitcoin.h>
 
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
+
 std::recursive_mutex lvgl_mutex;
 
 #define STR_INVOICE    PSTR("invoice")
@@ -27,7 +30,7 @@ std::recursive_mutex lvgl_mutex;
 
 
 // config variables
-TapConfig config;
+TapConfig tapConfig;
 String config_wspath = "";
 ProductConfig productConfig;
 
@@ -53,7 +56,7 @@ int tap_duration = 0;  // the duration of the tap
 void notifyOrderFulfilled();
 void notifyOrderReceived();
 void checkWiFi();
-void checkUpdate();
+void doFirmwareUpdate();
 void hidePanelMainMessage();
 void expireInvoice();
 void checkNFCPayment();
@@ -67,7 +70,7 @@ Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
-Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &checkUpdate);
+Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &doFirmwareUpdate);
 Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 
 
@@ -81,12 +84,12 @@ void setPanelMainMessage(const char *s,int timeout)  {
   hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
 }
 
-void update_finished() {
+void firmwareUpdateFinished() {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   lv_label_set_text(ui_LabelAboutMessage, STR_RESTARTING);
 }
 
-void update_progress(int cur, int total) {
+void firmwareUpdateProgress(int cur, int total) {
   static char message[25];
   snprintf_P(message, sizeof(message), PSTR("UPDATE PROGRESS %d%%"), 100 * cur / total);
   {
@@ -95,7 +98,7 @@ void update_progress(int cur, int total) {
   }
 }
 
-void update_error(int err) {
+void firmwareUpdateError(int err) {
   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
   switch (err ) {
     case HTTP_UE_NO_PARTITION:
@@ -130,46 +133,68 @@ void update_error(int err) {
   }
 }
 
-void doUpdate() {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+void startFirmwareUpdate() {
+  {
 
-  // disable buttons and move message panel so that it does not cover the logo
-  lv_obj_set_y(ui_PanelAboutMessage, 120);
-  lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATING FIRMWARE"));
-  lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
-  lv_disp_load_scr(ui_ScreenAbout);	  
-  
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
 
+    lv_obj_del(ui_ScreenBierFlowing);
+    lv_obj_del(ui_ScreenConfig);
+    lv_obj_del(ui_ScreenPin);
+    lv_obj_del(ui_ScreenMain);
+  }
+
+  delay(5000);
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+
+    // disable buttons and move message panel so that it does not cover the logo
+    lv_obj_set_y(ui_PanelAboutMessage, 120);
+    lv_label_set_text(ui_LabelAboutMessage, PSTR("UPDATING FIRMWARE"));
+    lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
+    lv_disp_load_scr(ui_ScreenAbout);	  
+  }  
   bDoUpdate = true;
+  checkUpdateTask.restartDelayed(2000);
 }
 
-void checkUpdate() {
+bool isReadyToServe() {
+  if ( productConfig.getNumProducts() == 0 ) {
+    return false;    
+  }
+  if (( tapConfig.getPaymentMode() == PAYMENT_MODE_ONLINE) && ( webSocket.isConnected() )) {
+    return true;    
+  }
+  return false;
+}
+
+void doFirmwareUpdate() {
   static char firmware_path[100];
   if ( ! bDoUpdate ) {
     return;
   }
   bDoUpdate = false;
 
-  //webSocket.disableHeartbeat();
-  //webSocket.disconnect();
+  webSocket.disableHeartbeat();
+  webSocket.disconnect();
 
   WiFiClientSecure client;
   client.setInsecure();
   client.setTimeout(12000);
 
 
-  httpUpdate.onEnd(update_finished);
-  httpUpdate.onProgress(update_progress);
-  httpUpdate.onError(update_error);
+  httpUpdate.onEnd(firmwareUpdateFinished);
+  httpUpdate.onProgress(firmwareUpdateProgress);
+  httpUpdate.onError(firmwareUpdateError);
   httpUpdate.rebootOnUpdate(true);
 
 #define FIRMWARE_HOST "firmware.bitcointaps.com"
-  snprintf_P(firmware_path, sizeof(firmware_path), PSTR("/partytap/ESP32_3248S035C/%s/firmware.bin"), productConfig.getServerVersion());
-
+  snprintf_P(firmware_path, sizeof(firmware_path), PSTR("/partytap/ESP32_3248S035C/%s/firmware_%s.bin"), productConfig.getServerVersion(), productConfig.getServerBranding());
 
   t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, firmware_path);
   
@@ -177,15 +202,15 @@ void checkUpdate() {
 #ifdef DEBUG
     Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
 #endif
-    update_error(httpUpdate.getLastError());
+    firmwareUpdateError(httpUpdate.getLastError());
     delay(10000);
     ESP.restart();
     return;
   }
 }
 
-void beerOpen(int i) {
-  switch ( config.getControlMode() ) {
+void tapOpen(int i) {
+  switch ( tapConfig.getControlMode() ) {
     case CONTROL_MODE_SERVO_TIME:
       sensact->writeServo(i);
       break;
@@ -206,8 +231,8 @@ void beerOpen(int i) {
   }
 }
 
-void beerClose(int i) {
-  switch ( config.getControlMode() ) {
+void tapClose(int i) {
+  switch ( tapConfig.getControlMode() ) {
     case CONTROL_MODE_SERVO_TIME:
       sensact->writeServo(i);
       break;
@@ -228,88 +253,8 @@ void beerClose(int i) {
   }
 }
 
-void beerStop() {
-  beerClose(config.getServoClose());
-}
-
-
-void connectPartyTap(const char *ssid,const char *pwd, const char *deviceid,const char *lnbitshost) {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  config.setWiFiSSID(ssid);
-  config.setWiFiPWD(pwd);
-  config.setDeviceID(deviceid);
-  config.setLNbitsHost(lnbitshost);
-  config.save();
-
-  bDoReconnect = true;
-}
-
-void saveTuning(int32_t servoClosed, int32_t servoOpen) {
-  config.setServoClose(servoClosed);
-  config.setServoOpen(servoOpen);
-  config.save();
-}
- 
-
-void updatePIN(const char *pin) {
-  config.setPIN(pin);
-  config.save();
-}
-
-bool checkConfigPIN(const char *pin) {
-  if ( pin == NULL ) {
-    return false;
-  }
-
-  if ( strcmp(pin,config.getPIN()) == 0 ) {
-    return true;
-  }
-
-  return false;
-}
-
-
-void handlePINResult(const char *pin) {
-  static char servo_text[5];
-
-  if ( checkConfigPIN(pin) == true ) {
-
-
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-
-  
-    lv_textarea_set_text(ui_TextAreaConfigSSID,config.getWiFiSSID());
-    lv_textarea_set_text(ui_TextAreaConfigWifiPassword,config.getWiFiPWD());
-    lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,config.getLNbitsHost());
-    lv_textarea_set_text(ui_TextAreaConfigDeviceID,config.getDeviceID());
-    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), config.getServoClose());
-    lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
-    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), config.getServoOpen());
-    lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
-    lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,config.getPaymentMode());
-    lv_dropdown_set_selected(ui_DropdownConfigControlMode,config.getControlMode());
-
-  	lv_disp_load_scr(ui_ScreenConfig);	
-		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
-    return;
-  }
-
-
-  Serial.println(payment_pin);
-  Serial.println(pin);
-  if ((payment_pin.length() == PAYMENT_PIN_LEN) && (strncmp(pin,payment_pin.c_str(),PAYMENT_PIN_LEN) == 0 )) {
-    Serial.println("PIN correct");
-    payment_pin = "";
-   	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
-    beerScreen();
-    return;
-  }
- 
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");    
-  }
-
+void tapStop() {
+  tapClose(tapConfig.getServoClose());
 }
 
 void notifyOrderReceived()
@@ -363,7 +308,7 @@ void updateBeerTapProgress()
   lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
 
   if (beerTapProgressTask.isLastIteration() ) {
-    beerClose(config.getServoClose());
+    tapClose(tapConfig.getServoClose());
     notifyOrderFulfilled();
     lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
     backToAboutPageTask.restartDelayed(TASK_SECOND * 3);
@@ -395,29 +340,7 @@ void beerStart()
     lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
 	  lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
   }
-	beerOpen(config.getServoOpen());    
-}
-
-void freeBeerClicked()
-{
-  tap_duration = config.getTapDuration();
-  beerScreen();
-}
-
-void setUIStatus(const char *shortMsg, const char *longMsg, bool bDisplayQRCode = false) {
-  return;
-  static char prevLongMsg[50] = "";
-  
-  if ( strcmp(prevLongMsg,longMsg) == 0 ) {
-    return;
-  } 
-  strncpy(prevLongMsg,longMsg,min(strlen(longMsg),strlen(prevLongMsg)));
-
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelAboutStatus,shortMsg);
-    lv_label_set_text(ui_LabelConfigStatus,longMsg);
-  }
+	tapOpen(tapConfig.getServoOpen());    
 }
 
 void make_lnurlw_withdraw(const char *lnurlw) {
@@ -506,7 +429,7 @@ void wantBierClicked(int item) {
   }
   
   // send request to create invoice
-  if ((( config.getPaymentMode() == PAYMENT_MODE_AUTO ) || ( config.getPaymentMode() == PAYMENT_MODE_ONLINE)) && webSocket.isConnected() ) {
+  if ((( tapConfig.getPaymentMode() == PAYMENT_MODE_AUTO ) || ( tapConfig.getPaymentMode() == PAYMENT_MODE_ONLINE)) && webSocket.isConnected() ) {
     String wsmessage = PSTR("{\"event\":\"createinvoice\",\"switch_id\":\"");
     wsmessage +=  productConfig.getProduct(selectedItem)->getSwitchID();
     wsmessage += PSTR("\"}");
@@ -516,7 +439,7 @@ void wantBierClicked(int item) {
       lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
       lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     }
-  } else if (( config.getPaymentMode() == PAYMENT_MODE_OFFLINE ) || ( config.getPaymentMode() == PAYMENT_MODE_AUTO )) {
+  } else if (( tapConfig.getPaymentMode() == PAYMENT_MODE_OFFLINE ) || ( tapConfig.getPaymentMode() == PAYMENT_MODE_AUTO )) {
     // take the offline route
     const char *ckey = (const char *)productConfig.getKey();
     unsigned char key[16];
@@ -618,9 +541,9 @@ void wantBierClicked(int item) {
 
 
     String url = "https://";
-    url += config.getLNbitsHost();
+    url += tapConfig.getLNbitsHost();
     url += "/partytap/api/v1/device/";
-    url += config.getDeviceID();
+    url += tapConfig.getDeviceID();
     url += "/payment?encrypted=";
     for (int i=0;i<48;i++) {
       char str[3];
@@ -688,15 +611,21 @@ void handlePaid(DynamicJsonDocument *doc) {
 
 void hidePaymentButtons()
 {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
-  lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+  Serial.println("hidePaymentButtons");
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+  }
 }
 
 void configureSwitches() {
   hidePaymentButtons();
 
+  if ( isReadyToServe() == false ) {
+    return;
+  }
 
   switch ( productConfig.getNumProducts() ) {
     case 1:
@@ -740,50 +669,6 @@ void configureSwitches() {
   } 
 }
 
-void setPaymentMode(const char *mode) {
-#ifdef DEBUG
-  Serial.printf("Changing Payment mode to:%s\n",mode);
-#endif
-
-  if ( strncasecmp(mode,"online",6) == 0 ) {
-    config.setPaymentMode(PAYMENT_MODE_ONLINE);
-    config.save();
-  } else if ( strncasecmp(mode,"offline",7) == 0 ) {
-    config.setPaymentMode(PAYMENT_MODE_OFFLINE);
-    config.save();
-  } else if ( strncasecmp(mode,"auto",4) == 0 ) {
-    config.setPaymentMode(PAYMENT_MODE_AUTO);
-    config.save();
-  }
-}
-
-void setControlMode(const char *mode) {
-#ifdef DEBUG
-  Serial.printf("Changing Control mode to:%s\n",mode);
-#endif
-
-  if ( strncasecmp(mode,"Servo, Time",11) == 0 ) {
-    config.setControlMode(CONTROL_MODE_SERVO_TIME);
-    config.save();
-  } else if ( strncasecmp(mode,"Relay, Time",11) == 0 ) {
-    config.setControlMode(CONTROL_MODE_RELAY_TIME);
-    config.save();
-  } else if ( strncasecmp(mode,"I2C Servo, Time",15) == 0 ) {
-    config.setControlMode(CONTROL_MODE_I2C_SERVO_TIME);
-    config.save();
-  } else if ( strncasecmp(mode,"I2C_Relay, Time",15) == 0 ) {
-    config.setControlMode(CONTROL_MODE_I2C_RELAY_TIME);
-    config.save();
-  } else if ( strncasecmp(mode,"I2C Servo, Ticks",16) == 0 ) {
-    config.setControlMode(CONTROL_MODE_I2C_SERVO_TICKS);
-    config.save();
-  } else if ( strncasecmp(mode,"I2C_Relay, Ticks",16) == 0 ) {
-    config.setControlMode(CONTROL_MODE_I2C_RELAY_TICKS);
-    config.save();
-  } else {
-    config.setControlMode(CONTROL_MODE_NONE);
-  }
-}
 
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
@@ -792,17 +677,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 #ifdef DEBUG
       Serial.println("WStype_DISCONNECTED");
 #endif
-
-      switch ( config.getPaymentMode() ) {
-        case PAYMENT_MODE_ONLINE:
-          hidePaymentButtons();
-          break;
-        case PAYMENT_MODE_OFFLINE:
-        case PAYMENT_MODE_AUTO:
-          if ( productConfig.getNumProducts() == 0 ) {
-            hidePaymentButtons();
-          }
-          break;
+      if ( ! isReadyToServe() ) {
+        hidePaymentButtons();
       }               
       break;
     case WStype_TEXT:
@@ -835,8 +711,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         } else if ( strcmp(event,"paymentfailed") == 0 ) {
           setPanelMainMessage("PAYMENT FAILED",3);
           checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3);  
-        } else if ( strcmp(event,"error") == 0 ) {
-          setUIStatus("WebSocket error",doc["message"].as<const char *>());
         } else {
 #ifdef DEBUG
           Serial.println(event);
@@ -897,6 +771,9 @@ void nfcReadSucces(int len,const char *data ) {
   webSocket.sendTXT(wsmessage);
 }
 
+void restartTap() {
+  ESP.restart();
+}
 
 void setup()
 {
@@ -915,7 +792,7 @@ void setup()
 
   // init filesystem and load config
   LittleFS.begin(true);
-  config.load();
+  tapConfig.load();
 
   smartdisplay_init();
   ui_init();
@@ -936,7 +813,7 @@ void setup()
   );
 
   sensact = new Sensact();
-  switch ( config.getControlMode() ) {
+  switch ( tapConfig.getControlMode() ) {
     case CONTROL_MODE_NONE:
       break;
     case CONTROL_MODE_SERVO_TIME:
@@ -959,7 +836,7 @@ void setup()
       break;
   }
 
-  beerClose(config.getServoClose());
+  tapClose(tapConfig.getServoClose());
 
   if ( productConfig.load() ) {
 #ifdef DEBUG
@@ -971,14 +848,13 @@ void setup()
 
   
   webSocket.onEvent(webSocketEvent);
- // webSocket.setReconnectInterval(3000);
-  //webSocket.enableHeartbeat(15000,4000,2);
+  webSocket.setReconnectInterval(3000);
+  webSocket.enableHeartbeat(15000,4000,2);
     
 
   checkWiFiTask.restartDelayed(1000);
-  checkUpdateTask.restartDelayed(5000);
 
-  WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
+  WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
 }
 
 void checkNFCPayment() {
@@ -992,10 +868,10 @@ void checkWiFi() {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
     bDoReconnect = false;
     bConnected = false;
-//    webSocket.disableHeartbeat();
-//    webSocket.disconnect();    
-//    WiFi.disconnect();
-//    WiFi.begin(config.getWiFiSSID(),config.getWiFiPWD());
+    webSocket.disableHeartbeat();
+    webSocket.disconnect();    
+    WiFi.disconnect();
+    WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
   }
 
 
@@ -1003,16 +879,15 @@ void checkWiFi() {
   switch ( status ) {
     case WL_CONNECTED:
       if ( bConnected == false ) {
-        setUIStatus("Wi-Fi connected","Wi-Fi connected");
 #ifdef DEBUG
         Serial.println("Connecting WebSocket");
 #endif
         
         config_wspath = "/partytap/api/v1/ws/";
-        config_wspath += config.getDeviceID();
-      //  webSocket.disconnect();
-        webSocket.beginSSL(config.getLNbitsHost(), 443, config_wspath);
-      //  webSocket.enableHeartbeat(15000,4000,2);
+        config_wspath += tapConfig.getDeviceID();
+        webSocket.disconnect();
+        webSocket.beginSSL(tapConfig.getLNbitsHost(), 443, config_wspath);
+        webSocket.enableHeartbeat(15000,4000,2);
         bConnected = true;
       }
       break;
@@ -1020,25 +895,6 @@ void checkWiFi() {
 #ifdef DEBUG
       Serial.println("ERROR_CONFIG_SSID");
 #endif
-      switch ( config.getPaymentMode() ) {
-        case PAYMENT_MODE_ONLINE:
-          setUIStatus("SSID not found","SSID not found");      
-          break;
-        case PAYMENT_MODE_OFFLINE:
-          if ( productConfig.getNumProducts() > 0 ) {
-            setUIStatus("Ready to serve","Ready to serve (offline)");      
-          } else {
-            setUIStatus("No products to serve","No products (offline)");      
-          }
-          break;
-        case PAYMENT_MODE_AUTO:
-          if ( productConfig.getNumProducts() > 0 ) {
-            setUIStatus("Ready to serve","Ready to serve (auto)");      
-          } else {
-            setUIStatus("No products to server","No products (auto)");      
-          }
-          break;
-      }
       break;
     case WL_CONNECTION_LOST:
 #ifdef DEBUG
@@ -1051,7 +907,6 @@ void checkWiFi() {
 #endif
       break;
     case WL_DISCONNECTED:
-      setUIStatus("Wi-Fi disconnected","Wi-Fi disconnected");
 #ifdef DEBUG
       Serial.println("WL_DISCONNECTED");
 #endif

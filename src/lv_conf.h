@@ -270,7 +270,7 @@
  * Requires LV_MEM_CUSTOM = 0*/
 #define LV_USE_MEM_MONITOR 1
 #if LV_USE_MEM_MONITOR
-    #define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
+    #define LV_USE_MEM_MONITOR_POS LV_ALIGN_TOP_LEFT
 #endif
 
 /*1: Draw random colored rectangles over the redrawn areas*/
