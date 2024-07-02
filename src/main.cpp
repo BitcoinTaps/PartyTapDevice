@@ -42,6 +42,7 @@ WebSocketsClient webSocket;
 
 bool bDoUpdate = false;
 bool bDoReconnect = false;
+bool freeTap = false; // The next beer is free
 
 // data related to a payment
 int selectedItem = 0;  // the index of the selected button
@@ -255,6 +256,10 @@ void tapClose(int i) {
   }
 }
 
+void tapStart() {
+  tapOpen(tapConfig.getServoOpen());
+}
+
 void tapStop() {
   tapClose(tapConfig.getServoClose());
 }
@@ -282,7 +287,7 @@ void updateBeerTapProgress()
   lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
 
   if (beerTapProgressTask.isLastIteration() ) {
-    tapClose(tapConfig.getServoClose());
+    tapStop();
     notifyOrderFulfilled();
     lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
     fromBeerToAboutPageTask.restartDelayed(TASK_SECOND * 3);
@@ -307,7 +312,7 @@ void beerStart()
     lv_obj_add_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
 	  lv_obj_clear_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
   }
-	tapOpen(tapConfig.getServoOpen());    
+  tapStart();
 }
 
 void make_lnurlw_withdraw(const char *lnurlw) {
@@ -397,7 +402,8 @@ void wantBierClicked(int item) {
   // set tap duration to default
   tap_duration = productConfig.getProduct(selectedItem)->getTapDuration();
 
-  if ( productConfig.getProduct(selectedItem)->getAmount() == 0 ) {
+  if ((freeTap ==true)||( productConfig.getProduct(selectedItem)->getAmount() == 0 )) {
+    freeTap = false;
 	  ui_ScreenBierFlowing_screen_init();
   	lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 		lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
@@ -839,8 +845,8 @@ void setup()
       break;
   }
 
-  tapClose(tapConfig.getServoClose());
-
+  tapStop();
+  
   if ( productConfig.load() ) {
 #ifdef DEBUG
     Serial.println("[main] products loaded from flash\n");
@@ -867,21 +873,33 @@ void checkNFCPayment() {
 
 void checkWiFi() {
   static bool bConnected = false;
+  
+  // if ( bDoReconnect ) {
+  //   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
+  //   bDoReconnect = false;
+  //   bConnected = false;
+  //   webSocket.disableHeartbeat();
+  //   webSocket.disconnect();    
+  //   WiFi.disconnect();
+  //   WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
+  // }
 
-  if ( bDoReconnect ) {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-    bDoReconnect = false;
-    bConnected = false;
-    webSocket.disableHeartbeat();
-    webSocket.disconnect();    
-    WiFi.disconnect();
-    WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
+  
+  if ( ui_ScreenAdmin != NULL ) {
+    if ( webSocket.isConnected() ) {
+        lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: connected");
+    } else {
+        lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: disconnected");
+    }
+
   }
-
 
   wl_status_t status = WiFi.status();
   switch ( status ) {
     case WL_CONNECTED:
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connected");
+      }
       if ( bConnected == false ) {
 #ifdef DEBUG
         Serial.println("Connecting WebSocket");
@@ -899,11 +917,17 @@ void checkWiFi() {
 #ifdef DEBUG
       Serial.println("ERROR_CONFIG_SSID");
 #endif
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: SSID not found");
+      }
       break;
     case WL_CONNECTION_LOST:
 #ifdef DEBUG
       Serial.println("CONNECTION LOST");
 #endif
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connection lost");
+      }
       break;
     case WL_IDLE_STATUS:
 #ifdef DEBUG
@@ -914,16 +938,25 @@ void checkWiFi() {
 #ifdef DEBUG
       Serial.println("WL_DISCONNECTED");
 #endif
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: disconnected");
+      }
       break;
     case WL_NO_SHIELD:
 #ifdef DEBUG
       Serial.println("Wi-Fi device not initialized");
 #endif
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: no device");
+      }
       break;
     case WL_CONNECT_FAILED:
 #ifdef DEBUG
       Serial.println("WL_CONNECT_FAILED");
 #endif
+      if ( ui_ScreenAdmin != NULL ) {
+        lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connect failed");
+      }
       break;
     default:
 #ifdef DEBUG

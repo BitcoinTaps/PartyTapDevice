@@ -14,9 +14,14 @@ lnbits_dir = "lnbits"
 firmware_dir = f"{lnbits_dir}/static/firmware/{pioenv}"
 template_dir = f"{lnbits_dir}/templates/partytap"
 
-for filename in ['firmware.bin','partitions.bin','bootloader.bin']:
+for filename in ['partitions.bin','bootloader.bin']:
     shutil.copyfile(f"{build_dir}/{filename}",f"{firmware_dir}/{filename}")
 
+shutil.copyfile(f"{build_dir}/firmware.bin",f"{firmware_dir}/firmware.bin")
+shutil.copyfile(f"{build_dir}/firmware.bin",f"{firmware_dir}/firmware_BITCOINTAPS.bin")
+shutil.copyfile(f"{build_dir}_NONE/firmware.bin",f"{firmware_dir}/firmware_NONE.bin")
+shutil.copyfile(f"{build_dir}_BEER/firmware.bin",f"{firmware_dir}/firmware_BEER.bin")
+         
 # update tasks.py
 with open(f"{lnbits_dir}/tasks.py") as file:
     content = file.read()

@@ -130,35 +130,53 @@ extern lv_obj_t * ui_Image3;
 extern lv_obj_t * ui_LabelInstructions;
 extern lv_obj_t * ui_BarBierProgress;
 extern lv_obj_t * ui_ButtonBierStart;
-extern lv_obj_t * ui_Label45;
+extern lv_obj_t * ui_LabelBierStart;
 void ui_event_ButtonBierStart(lv_event_t * e);
 
+// admin screen
+extern lv_obj_t * ui_ScreenAdmin;
+extern lv_obj_t * ui_LabelAdminBranding;
+extern lv_obj_t * ui_LabelAdminServerVersion;
+extern lv_obj_t * ui_LabelAdminWiFiStatus;
+extern lv_obj_t * ui_LabelAdminWebSocketStatus;
+void ui_ScreenAdmin_screen_init(void);
+void ButtonAdminConfigClicked(lv_event_t * e);
+void ButtonAdminCancelClicked(lv_event_t * e);
+void ButtonAdminOpenClicked(lv_event_t * e);
+void ButtonAdminCloseClicked(lv_event_t * e);
+void ButtonAdminFreeClicked(lv_event_t * e);
 
+// config screen
+void ui_ScreenConfig_screen_init(void);
+void ButtonConfigDoneClicked(lv_event_t *e);
+void ButtonConfigCancelClicked(lv_event_t *e);
+void ButtonConfigUpdateClicked(lv_event_t *e);
+
+
+// PIN screen
+void ui_ScreenPin_screen_init(void);
 void ButtonPinNumberClicked(lv_event_t * e);
 void ButtonPinCancelClicked(lv_event_t * e);
 void ButtonPinOKClicked(lv_event_t * e);
-
 void ButtonOKPINClicked(lv_event_t * e);
 void ButtonCancelPINClicked(lv_event_t * e);
+
+// About screen
+void ui_ScreenAbout_screen_init(void);
 void ButtonAboutOneClicked(lv_event_t * e);
 void ButtonAboutTwoClicked(lv_event_t * e);
 void ButtonAboutThreeClicked(lv_event_t * e);
 void PanelAboutHeaderClicked(lv_event_t * e);
 
-void ButtonConfigDoneClicked(lv_event_t *e);
-void ButtonConfigCancelClicked(lv_event_t *e);
-void ButtonConfigUpdateClicked(lv_event_t *e);
-
+// main screen
+void ui_ScreenMain_screen_init(void);
 void ButtonMainBackClicked(lv_event_t * e);
 void ButtonMainEnterPINClicked(lv_event_t * e);
 
+
+// Bier flowing screen
 void ButtonScreenBierFlowingClicked(lv_event_t * e);
 void ButtonBierStartClicked(lv_event_t * e);
-
-void ui_ScreenConfig_screen_init(void);
-void ui_ScreenAbout_screen_init(void);
-void ui_ScreenMain_screen_init(void);
-void ui_ScreenPin_screen_init(void);
 void ui_ScreenBierFlowing_screen_init(void);
 
 

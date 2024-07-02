@@ -19,8 +19,8 @@ ProductConfig::ProductConfig() {
     this->key = "0000111122224444";
 
     // the extension version of the PartyTap extension at the server. If no version is provided, it is assumed that this is the version
-    this->serverVersion = STR(FIRMWARE_VERSION); 
-    this->serverBranding = "BitcoinTaps";
+    this->serverVersion = "";
+    this->serverBranding = "";
 }
 
 int ProductConfig::getNumProducts() {

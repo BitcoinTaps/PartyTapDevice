@@ -45,22 +45,13 @@ void ButtonPinCancelClicked(lv_event_t * e)
 
 void ButtonPinOKClicked(lv_event_t * e)
 {
-	char servo_text[10];
 	// if the config PIN is entered, go to config
 	if ( strcmp(entered_pin.c_str(),tapConfig.getPIN()) == 0 ) {
 		entered_pin = "";  
-		ui_ScreenConfig_screen_init();
-    	lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
-    	lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
-    	lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
-    	lv_textarea_set_text(ui_TextAreaConfigDeviceID,tapConfig.getDeviceID());
-    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoClose());
-    	lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
-    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoOpen());
-    	lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
-    	lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
-    	lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
-  		lv_disp_load_scr(ui_ScreenConfig);	
+		ui_ScreenAdmin_screen_init();
+		lv_label_set_text_fmt(ui_LabelAdminServerVersion,"Server version: %s",productConfig.getServerVersion());
+		lv_label_set_text_fmt(ui_LabelAdminBranding,"Server Branding: %s",productConfig.getServerBranding());
+		lv_disp_load_scr(ui_ScreenAdmin);
 		lv_obj_del(ui_ScreenPin);
   		ui_ScreenPin = NULL;
 		return;
@@ -206,10 +197,12 @@ void ButtonConfigOpenClicked(lv_event_t * e)
 
 void ButtonConfigCancelClicked(lv_event_t * e)
 {
-	ui_ScreenAbout_screen_init();
-	configureSwitches();	
-	lv_disp_load_scr(ui_ScreenAbout);
+	ui_ScreenAdmin_screen_init();
+	lv_label_set_text_fmt(ui_LabelAdminServerVersion,"Server version: %s",productConfig.getServerVersion());
+	lv_label_set_text_fmt(ui_LabelAdminBranding,"Server Branding: %s",productConfig.getServerBranding());
+	lv_disp_load_scr(ui_ScreenAdmin);
 	lv_obj_del(ui_ScreenConfig);
+	ui_ScreenConfig = NULL;
 }
 
 void ButtonConfigUpdateClicked(lv_event_t * e)
@@ -224,6 +217,7 @@ void ButtonConfigUpdateClicked(lv_event_t * e)
     lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);	
     lv_disp_load_scr(ui_ScreenAbout);	  	
 	lv_obj_del(ui_ScreenConfig);
+	ui_ScreenConfig = NULL;
 	startFirmwareUpdate();
 }
 
@@ -300,4 +294,69 @@ void PanelAboutHeaderClicked(lv_event_t *e) {
 	ui_ScreenAbout = NULL;
 }
 
+// navigate from admin screen to config screen
+void ButtonAdminConfigClicked(lv_event_t *e) {
+#ifdef DEBUG
+	Serial.println("[ButtonAdminConfigClicked]");
+#endif	
+	char servo_text[10];
+	ui_ScreenConfig_screen_init();
+    lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
+    lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
+    lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
+    lv_textarea_set_text(ui_TextAreaConfigDeviceID,tapConfig.getDeviceID());
+    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoClose());
+    lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
+    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoOpen());
+    lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
+    lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
+    lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
+  	lv_disp_load_scr(ui_ScreenConfig);	
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
+
+// Navigate from Admin Screen to About screen
+void ButtonAdminCancelClicked(lv_event_t *e) {
+#ifdef DEBUG
+	Serial.println("[ButtonAdminCancelClicked]");
+#endif	
+	ui_ScreenAbout_screen_init();
+	configureSwitches();	
+	lv_disp_load_scr(ui_ScreenAbout);
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
+
+// Tap Open Click on Admin screen
+void ButtonAdminOpenClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminOpenClicked]");
+#endif
+	tapStart();
+}
+
+// Tap Close Click on Admin screen
+void ButtonAdminCloseClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminCloseClicked]");
+#endif
+	tapStop();
+}
+
+// Free Clicked on Admin screen
+void ButtonAdminFreeClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminFreeClicked]");
+#endif
+	freeTap = true;
+	ui_ScreenAbout_screen_init();
+	configureSwitches();	
+	lv_disp_load_scr(ui_ScreenAbout);
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
 

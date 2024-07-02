@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <tapconfig.h>
+#include <productconfig.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,7 +15,13 @@ extern String payment_pin;
 
 extern TapConfig tapConfig;
 
+extern ProductConfig productConfig;
+
+extern bool freeTap;
+
 void configureSwitches();
+
+void tapStart();
 
 void tapStop();
 

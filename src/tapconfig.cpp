@@ -28,7 +28,7 @@ TapConfig::TapConfig() {
     this->tap_duration = 5000;
     this->paymentMode = PAYMENT_MODE_ONLINE;
     this->backlight = 100;
-    this->controlMode = CONTROL_MODE_NONE;
+    this->controlMode = CONTROL_MODE_SERVO_TIME;
 }
 
 bool TapConfig::load() {
