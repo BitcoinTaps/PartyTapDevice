@@ -14,21 +14,19 @@ extern String payment_pin;
 
 extern TapConfig tapConfig;
 
+void configureSwitches();
+
 void tapStop();
 
 void tapOpen(int i);
 
 void tapClose(int i);
 
-void beerScreen();
-
 void beerStart();
 
 void wantBierClicked(int item);
 
-void backToAboutPage();
-
-void toConfigPage();
+void expireInvoice();
 
 void myDelay(uint32_t ms);
 

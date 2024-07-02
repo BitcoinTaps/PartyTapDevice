@@ -61,6 +61,7 @@ void hidePanelMainMessage();
 void expireInvoice();
 void checkNFCPayment();
 void updateBeerTapProgress();
+void fromBeerToAboutPage();
 void loop0(void *parameters);
 
 // task scheduler
@@ -68,7 +69,7 @@ Scheduler taskScheduler;
 Task checkWiFiTask(4 * TASK_SECOND, TASK_FOREVER, &checkWiFi);
 Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
-Task backToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &backToAboutPage);
+Task fromBeerToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &fromBeerToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
 Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &doFirmwareUpdate);
 Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
@@ -78,10 +79,12 @@ Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 
 
 void setPanelMainMessage(const char *s,int timeout)  {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_label_set_text(ui_LabelMainMessage, s);  
-  lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
-  hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
+  if ( ui_ScreenMain != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelMainMessage, s);  
+    lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
+    hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
+  }
 }
 
 void firmwareUpdateFinished() {
@@ -133,6 +136,14 @@ void firmwareUpdateError(int err) {
   }
 }
 
+void fromBeerToAboutPage() {
+  ui_ScreenAbout_screen_init();
+  configureSwitches();
+  lv_scr_load(ui_ScreenAbout);
+  lv_obj_del(ui_ScreenBierFlowing);
+  ui_ScreenBierFlowing = NULL;
+}
+
 void startFirmwareUpdate() {
   delay(1000);
   bDoUpdate = true;
@@ -141,11 +152,24 @@ void startFirmwareUpdate() {
 
 bool isReadyToServe() {
   if ( productConfig.getNumProducts() == 0 ) {
+#ifdef DEBUG
+    Serial.println("[isReadyToServe] productConfig.getNumProducts returned 0");
+#endif
     return false;    
   }
-  if (( tapConfig.getPaymentMode() == PAYMENT_MODE_ONLINE) && ( webSocket.isConnected() )) {
-    return true;    
+
+  switch ( tapConfig.getPaymentMode() ) {
+    case PAYMENT_MODE_ONLINE:
+      if ( webSocket.isConnected() ) {
+        return true;
+      }    
+      break;
+    case PAYMENT_MODE_AUTO:
+    case PAYMENT_MODE_OFFLINE:
+      return true;      
+      break;
   }
+  
   return false;
 }
 
@@ -251,30 +275,6 @@ void notifyOrderFulfilled()
   webSocket.sendTXT(wsmessage);  
 }
 
-void toConfigPage()
-{
-  expireInvoiceTask.disable();
-  if ( sensact->isNFCAvailable() ) {
-    checkNFCPaymentTask.disable();
-  }
-}
-
-void backToAboutPage()
-{
-  expireInvoiceTask.disable();
-  if ( sensact->isNFCAvailable() ) {
-    checkNFCPaymentTask.disable();
-  }
-
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    ui_ScreenAbout_screen_init();
-    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-    lv_disp_load_scr(ui_ScreenAbout);	  
-    lv_obj_del(ui_ScreenBierFlowing);
-  }
-}
-
 // update the slider of the progress bar while tapping
 void updateBeerTapProgress()
 {
@@ -285,24 +285,15 @@ void updateBeerTapProgress()
     tapClose(tapConfig.getServoClose());
     notifyOrderFulfilled();
     lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
-    backToAboutPageTask.restartDelayed(TASK_SECOND * 3);
+    fromBeerToAboutPageTask.restartDelayed(TASK_SECOND * 3);
   }
 } 
 
-void beerScreen()
-{
-  payment_pin = "";
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  ui_ScreenBierFlowing_screen_init();
-  lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
-  lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
-	lv_disp_load_scr(ui_ScreenBierFlowing);	
-  lv_obj_del(ui_ScreenMain);
-}
-
 void beerStart()
 {
+#ifdef DEBUG
+  Serial.println("[beerStart]");
+#endif
   // the user hascommende to tap the beer, delete the payment_pin for offline payments
   payment_pin = "";
   
@@ -342,13 +333,18 @@ void hidePanelMainMessage()
 
 void expireInvoice()
 { 
-  {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    ui_ScreenAbout_screen_init();
-    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-    lv_disp_load_scr(ui_ScreenAbout);	  
-    lv_obj_del(ui_ScreenMain);
-  }
+#ifdef DEBUG
+  Serial.println("[expireInvoice]");
+#endif
+  // {
+  //   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+  //   ui_ScreenAbout_screen_init();
+  //   lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+  //   configureSwitches();
+  //   lv_disp_load_scr(ui_ScreenAbout);	  
+  //   lv_obj_del(ui_ScreenMain);
+  //   ui_ScreenMain = NULL;
+  // }
 
   expireInvoiceTask.disable();
   if ( sensact->isNFCAvailable() ) {
@@ -383,19 +379,15 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenMain);	
     lv_obj_del(ui_ScreenAbout);
+    ui_ScreenAbout = NULL;
   }
 }
 
 // called from LVGL thread
 void wantBierClicked(int item) {
-  if ( productConfig.getNumProducts() == 0 ) {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    ui_ScreenPin_screen_init();
-    lv_disp_load_scr(ui_ScreenPin);	
-    lv_obj_del(ui_ScreenAbout);
-    return;
-  }
-
+#ifdef DEBUG
+  Serial.println("[wantBierClicked]");
+#endif
   // reset all parameters
   selectedItem = item;
   payment_hash = "";
@@ -406,7 +398,13 @@ void wantBierClicked(int item) {
   tap_duration = productConfig.getProduct(selectedItem)->getTapDuration();
 
   if ( productConfig.getProduct(selectedItem)->getAmount() == 0 ) {
-    beerScreen();
+	  ui_ScreenBierFlowing_screen_init();
+  	lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+		lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
+  	lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
+		lv_disp_load_scr(ui_ScreenBierFlowing);	
+  	lv_obj_del(ui_ScreenAbout);
+  	ui_ScreenAbout = NULL;
     return;
   }
   
@@ -432,7 +430,7 @@ void wantBierClicked(int item) {
     key[16] = 0;
 
 #ifdef DEBUG
-    Serial.printf("KEY: ");
+    Serial.printf("[wantBeerClicked] KEY: ");
     for (int i = 0; i < 16; i++)
     {
       Serial.printf("%02x",key[i]);
@@ -449,8 +447,9 @@ void wantBierClicked(int item) {
       iv[i] = iiv[i];    
     }
 
+
 #ifdef DEBUG
-    Serial.printf("IV: ");
+    Serial.printf("[wantBeerClicked] IV: ");
     for (int i = 0; i < 16; i++)
     {
       Serial.printf("%02x",iv[i]);
@@ -472,7 +471,7 @@ void wantBierClicked(int item) {
     input[9 + PAYMENT_PIN_LEN + 1] = 0;
 
 #ifdef DEBUG
-    Serial.printf("Input: ");
+    Serial.printf("[wantBeerClicked] Input: ");
     for(int i=0;(i<16);i++) {
       Serial.printf("%c",input[i]);
     }
@@ -491,7 +490,7 @@ void wantBierClicked(int item) {
     mbedtls_md_free(&sha);
 
 #ifdef DEBUG
-    Serial.printf("SHA256: ");
+    Serial.printf("[wantBeerClicked] SHA256: ");
     for(int i=0;(i<32);i++) {
       Serial.printf("%02x",sha256Result[i]);
     }
@@ -501,7 +500,7 @@ void wantBierClicked(int item) {
     memcpy(input + 16, sha256Result, 32);
 
 #ifdef DEBUG
-    Serial.printf("Input: ");
+    Serial.printf("[wantBeerClicked] Input: ");
     for(int i=0;(i<48);i++) {
       Serial.printf("%02x",input[i]);
     }
@@ -514,7 +513,7 @@ void wantBierClicked(int item) {
     mbedtls_aes_free(&aes);
 
 #ifdef DEBUG
-    Serial.printf("Encrypted: ");
+    Serial.printf("[wantBeerClicked] Encrypted: ");
     for(int i=0;(i<48);i++) {
       Serial.printf("%02x",output[i]);
     }
@@ -546,7 +545,7 @@ void wantBierClicked(int item) {
     char *charLnurl = (char *)calloc(url.length() * 2, sizeof(byte));
     bech32_encode(charLnurl, "lnurl", data, len);
 #ifdef DEBUG
-    Serial.println(charLnurl);
+    Serial.printf("[wantBeerClicked] %s\n",charLnurl);
 #endif
 
     // Update UI
@@ -564,8 +563,9 @@ void wantBierClicked(int item) {
       lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
       lv_disp_load_scr(ui_ScreenMain);
       lv_obj_del(ui_ScreenAbout);	
+      ui_ScreenAbout = NULL;
     }
-    expireInvoiceTask.restartDelayed(TASK_SECOND * 120);
+    expireInvoiceTask.restartDelayed(TASK_SECOND * 180);
   }
 
 
@@ -590,13 +590,25 @@ void handlePaid(DynamicJsonDocument *doc) {
   }
 
   tap_duration = (*doc)["payload"].as<int>();
-  beerScreen();
+
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenBierFlowing_screen_init();
+    lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+	  lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
+    lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
+	  lv_disp_load_scr(ui_ScreenBierFlowing);	
+    lv_obj_del(ui_ScreenMain);
+    ui_ScreenMain = NULL;
+  }
 }
 
 void hidePaymentButtons()
-{
-  Serial.println("hidePaymentButtons");
-  {
+{  
+#ifdef DEBUG
+  Serial.println("[hidePaymentButtons]");
+#endif
+  if ( ui_ScreenAbout != NULL ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
@@ -608,6 +620,13 @@ void configureSwitches() {
   hidePaymentButtons();
 
   if ( isReadyToServe() == false ) {
+#ifdef DEBUG
+    Serial.println("configureSwitches: Is not ready to serve");
+#endif
+    return;
+  }
+
+  if ( ui_ScreenAbout == NULL ) {
     return;
   }
 
@@ -659,7 +678,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
     case WStype_DISCONNECTED:      
 #ifdef DEBUG
-      Serial.println("WStype_DISCONNECTED");
+      Serial.println("[webSocketEvent] WStype_DISCONNECTED");
 #endif
       if ( ! isReadyToServe() ) {
         hidePaymentButtons();
@@ -671,18 +690,18 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
         DeserializationError error = deserializeJson(doc, (char *)payload);
 #ifdef DEBUG
         if ( error.code() !=  DeserializationError::Ok ) {
-          Serial.println("Error in JSON parsing");
+          Serial.println("[webSocketEvent] Error in JSON parsing");
           return;
         }
 #endif      
         // get the message type
         const char *event = doc["event"].as<const char *>();
 #ifdef DEBUG
-        Serial.printf("WS Event type = %s\n",event);
+        Serial.printf("[webSocketEvent] received type = %s\n",event);
 #endif
         if ( strcmp(event,STR_SWITCHES) == 0 ) {
 #ifdef DEBUG
-          Serial.println("Received switches");
+          Serial.println("[webSocketEvent] Received switches");
 #endif
           productConfig.parse(&doc);        
           productConfig.save();
@@ -704,7 +723,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
       break;
     default:
 #ifdef DEBUG
-      Serial.printf("Received Websocket message of type: %d\n",type);
+      Serial.printf("[webSocketEvent] received message type %d\n",type);
 #endif
 			break;
   }
@@ -771,7 +790,7 @@ void setup()
   taskScheduler.addTask(checkUpdateTask);
   taskScheduler.addTask(hidePanelMainMessageTask);
   taskScheduler.addTask(expireInvoiceTask);
-  taskScheduler.addTask(backToAboutPageTask);
+  taskScheduler.addTask(fromBeerToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
 
   // init filesystem and load config
@@ -839,6 +858,7 @@ void setup()
   checkWiFiTask.restartDelayed(1000);
 
   WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
+
 }
 
 void checkNFCPayment() {

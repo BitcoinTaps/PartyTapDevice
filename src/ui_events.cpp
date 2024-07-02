@@ -34,8 +34,10 @@ void ButtonPinCancelClicked(lv_event_t * e)
 	// Your code here
 	if ( entered_pin.length() == 0 ) {
 		ui_ScreenAbout_screen_init();
+		configureSwitches();
 		lv_disp_load_scr(ui_ScreenAbout);		
 		lv_obj_del(ui_ScreenPin);
+		ui_ScreenPin = NULL;
 	}
 	entered_pin = "";
 	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
@@ -60,18 +62,33 @@ void ButtonPinOKClicked(lv_event_t * e)
     	lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
   		lv_disp_load_scr(ui_ScreenConfig);	
 		lv_obj_del(ui_ScreenPin);
+  		ui_ScreenPin = NULL;
 		return;
 	}
 
 	if ((payment_pin.length() == PAYMENT_PIN_LEN) && (strncmp(entered_pin.c_str(),payment_pin.c_str(),PAYMENT_PIN_LEN) == 0 )) {
-    	Serial.println("PIN correct");
+#ifdef DEBUG
+    	Serial.println("[ButtonPinOKClicked] PIN correct");
+#endif
 		entered_pin = "";
     	payment_pin = "";
-   		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
-    	beerScreen();
-    	return;
+
+  		ui_ScreenBierFlowing_screen_init();
+  		lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+		lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
+  		lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
+		lv_disp_load_scr(ui_ScreenBierFlowing);	
+  		lv_obj_del(ui_ScreenPin);
+  		ui_ScreenPin = NULL;
+		
+		return;
   	}
  
+#ifdef DEBUG
+	Serial.printf("[ButtonPinOKClicked] entered_pin = '%s'\n",entered_pin);
+	Serial.printf("[ButtonPinOKClicked] payment_pin = '%s'\n",payment_pin);
+#endif
+	entered_pin = "";
  	lv_label_set_text(ui_LabelPINValue,"PIN INCORRECT");    
 }
 
@@ -190,6 +207,7 @@ void ButtonConfigOpenClicked(lv_event_t * e)
 void ButtonConfigCancelClicked(lv_event_t * e)
 {
 	ui_ScreenAbout_screen_init();
+	configureSwitches();	
 	lv_disp_load_scr(ui_ScreenAbout);
 	lv_obj_del(ui_ScreenConfig);
 }
@@ -203,7 +221,7 @@ void ButtonConfigUpdateClicked(lv_event_t * e)
     lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);	
     lv_disp_load_scr(ui_ScreenAbout);	  	
 	lv_obj_del(ui_ScreenConfig);
 	startFirmwareUpdate();
@@ -212,6 +230,9 @@ void ButtonConfigUpdateClicked(lv_event_t * e)
 
 void ButtonScreenBierFlowingClicked(lv_event_t * e)
 {
+#ifdef DEBUG
+	Serial.println("[ButtonScreenBeerFlowingClicked]");
+#endif
 	tapStop();
 }
 
@@ -237,17 +258,28 @@ void ButtonAboutThreeClicked(lv_event_t *e)
 }
 
 void ButtonMainBackClicked(lv_event_t *e) {
-	backToAboutPage();
+#ifdef DEBUG
+	Serial.println("[ButtonMainBackClicked]");
+#endif
+	expireInvoice();
+	ui_ScreenAbout_screen_init();
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    configureSwitches();
+    lv_disp_load_scr(ui_ScreenAbout);	  
+    lv_obj_del(ui_ScreenMain);
+	ui_ScreenMain = NULL;
 }
 
 void ButtonMainEnterPINClicked(lv_event_t *e) {
-	toConfigPage();
+#ifdef DEBUG
+	Serial.println("[ButtonMainEnterPINClicked]");
+#endif
     entered_pin = "";
 	ui_ScreenPin_screen_init();
     lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
-    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenPin);	  
 	lv_obj_del(ui_ScreenMain);
+	ui_ScreenMain = NULL;
 }
 
 
@@ -256,15 +288,16 @@ void ButtonMainEnterPINClicked(lv_event_t *e) {
 void PanelAboutHeaderClicked(lv_event_t *e) {
 	// move from About to PIN Screen
 #ifdef DEBUG
-	Serial.println("PanelAboutHeaderClicked");
+	Serial.println("[PanelAboutHeaderClicked]");
 #endif
-	toConfigPage();
+	expireInvoice();
 	entered_pin = "";
 	payment_pin = "";
 	ui_ScreenPin_screen_init();
     lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
     lv_disp_load_scr(ui_ScreenPin);	  
 	lv_obj_del(ui_ScreenAbout);
+	ui_ScreenAbout = NULL;
 }
 
 

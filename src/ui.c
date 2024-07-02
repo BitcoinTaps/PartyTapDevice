@@ -210,7 +210,6 @@ void ui_event_ButtonMainAbout(lv_event_t * e)
 void ui_event_ButtonMainEnterPIN(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_CLICKED) {
         //_ui_screen_change(ui_ScreenAbout, LV_SCR_LOAD_ANIM_NONE, 0, 0);
         ButtonMainEnterPINClicked(e);
@@ -503,7 +502,7 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_x(ui_LabelAboutStatus, 0);
     lv_obj_set_y(ui_LabelAboutStatus, -20);
     lv_obj_set_align(ui_LabelAboutStatus, LV_ALIGN_BOTTOM_MID);
-    lv_label_set_text(ui_LabelAboutStatus, "--");
+    lv_label_set_text(ui_LabelAboutStatus, "");
     lv_obj_set_style_text_color(ui_LabelAboutStatus, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelAboutStatus, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutStatus, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -895,8 +894,6 @@ void ui_ScreenPin_screen_init(void)
     ui_LabelPin8 = lv_label_create(ui_ButtonPin8);
     lv_obj_set_width(ui_LabelPin8, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPin8, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPin8, 0);
-    lv_obj_set_y(ui_LabelPin8, -1);
     lv_obj_set_align(ui_LabelPin8, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPin8, "8");
     lv_obj_set_style_text_color(ui_LabelPin8, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);

@@ -40,15 +40,14 @@ const char *ProductConfig::getServerVersion() {
 }
 
 bool ProductConfig::parse(DynamicJsonDocument *doc) {
+#ifdef DEBUG
+    Serial.println("[ProductConfig::parse]");
+#endif
+
     this->numProducts = 0;
     
 #ifdef DEBUG
-    Serial.println("ProductCondig::parse");
-#endif
-
-
-#ifdef DEBUG
-    Serial.printf("ProductConfig::parse, num produicts = %d\n",this->numProducts);
+    Serial.printf("[ProductConfig::parse] num products = %d\n",this->numProducts);
 #endif
 
     if ( doc->containsKey("version")) {
@@ -95,13 +94,16 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
 
 
 #ifdef DEBUG
-    Serial.println("ProductCondif::parse finished");
+    Serial.println("ProductCondig::parse finished");
 #endif
 
     return true;
 }
 
 bool ProductConfig::save() {
+#ifdef DEBUG
+    Serial.println("[ProductConfig::save]");
+#endif
     File file = LittleFS.open("/switches.json", "w");
     if (!file) {
         return false;
