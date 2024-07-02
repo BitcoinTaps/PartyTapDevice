@@ -408,6 +408,7 @@ void wantBierClicked(int item) {
   	lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 		lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
   	lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
+    lv_anim_start(&ui_AnimateBierStart);
 		lv_disp_load_scr(ui_ScreenBierFlowing);	
   	lv_obj_del(ui_ScreenAbout);
   	ui_ScreenAbout = NULL;
@@ -645,6 +646,8 @@ void configureSwitches() {
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+
+        lv_anim_start(&ui_AnimateAboutOne);
       }
       break;
     case 2:
@@ -657,6 +660,8 @@ void configureSwitches() {
         lv_obj_set_x(ui_ButtonAboutTwo, 60);
         lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
         lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
+        lv_anim_start(&ui_AnimateAboutOne);
+        lv_anim_start(&ui_AnimateAboutTwo);
       }
       break;
     case 3:
@@ -671,6 +676,9 @@ void configureSwitches() {
         lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
         lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
         lv_label_set_text(ui_LabelAboutThree, productConfig.getProduct(2)->getLabel());
+        lv_anim_start(&ui_AnimateAboutOne);
+        lv_anim_start(&ui_AnimateAboutTwo);
+        lv_anim_start(&ui_AnimateAboutThree);
       }
       break;
     default:
