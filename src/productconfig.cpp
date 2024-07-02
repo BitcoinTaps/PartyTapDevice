@@ -11,13 +11,16 @@
 #define PRODUCT_CONFIG_AMOUNT "amount"
 #define PRODUCT_CONFIG_CURRENCY "currency"
 
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
 
 ProductConfig::ProductConfig() {
     this->numProducts = 0;
     this->key = "0000111122224444";
 
     // the extension version of the PartyTap extension at the server. If no version is provided, it is assumed that this is the version
-    this->serverVersion = "838644"; 
+    this->serverVersion = STR(FIRMWARE_VERSION); 
+    this->serverBranding = "BitcoinTaps";
 }
 
 int ProductConfig::getNumProducts() {
@@ -37,21 +40,27 @@ const char *ProductConfig::getServerVersion() {
 }
 
 bool ProductConfig::parse(DynamicJsonDocument *doc) {
+#ifdef DEBUG
+    Serial.println("[ProductConfig::parse]");
+#endif
+
     this->numProducts = 0;
     
 #ifdef DEBUG
-    Serial.println("ProductCondig::parse");
-#endif
-
-
-#ifdef DEBUG
-    Serial.printf("ProductConfig::parse, num produicts = %d\n",this->numProducts);
+    Serial.printf("[ProductConfig::parse] num products = %d\n",this->numProducts);
 #endif
 
     if ( doc->containsKey("version")) {
         this->serverVersion = (*doc)["version"].as<const char *>();
 #ifdef DEBUG
         Serial.printf("[ProductConfig::parse] Server version: '%s'\n",this->serverVersion.c_str());
+#endif
+    }
+
+    if ( doc->containsKey("branding")) {
+        this->serverBranding = (*doc)["branding"].as<const char *>();
+#ifdef DEBUG
+        Serial.printf("[ProductConfig::parse] Server branding: '%s'\n",this->serverBranding.c_str());
 #endif
     }
 
@@ -85,13 +94,16 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
 
 
 #ifdef DEBUG
-    Serial.println("ProductCondif::parse finished");
+    Serial.println("ProductCondig::parse finished");
 #endif
 
     return true;
 }
 
 bool ProductConfig::save() {
+#ifdef DEBUG
+    Serial.println("[ProductConfig::save]");
+#endif
     File file = LittleFS.open("/switches.json", "w");
     if (!file) {
         return false;
@@ -127,6 +139,9 @@ bool ProductConfig::save() {
     return true;
 }
 
+const char *ProductConfig::getServerBranding() {
+    return this->serverBranding.c_str();
+}
 
 bool ProductConfig::load() {
     File file = LittleFS.open("/switches.json", "r");

@@ -3,9 +3,17 @@
 
 #include <Arduino.h>
 
-#define MODE_ONLINE  0
-#define MODE_OFFLINE 1
-#define MODE_AUTO    2
+#define PAYMENT_MODE_ONLINE  0
+#define PAYMENT_MODE_OFFLINE 1
+#define PAYMENT_MODE_AUTO    2
+
+#define CONTROL_MODE_NONE  0
+#define CONTROL_MODE_SERVO_TIME 1
+#define CONTROL_MODE_RELAY_TIME 2
+#define CONTROL_MODE_I2C_SERVO_TIME 3
+#define CONTROL_MODE_I2C_RELAY_TIME 4
+#define CONTROL_MODE_I2C_SERVO_TICKS 5
+#define CONTROL_MODE_I2C_RELAY_TICKS 6
 
 class TapConfig {
     private:
@@ -17,7 +25,8 @@ class TapConfig {
         String deviceid;
         String pin;
         int tap_duration;
-        int operatingmode;
+        int paymentMode;
+        int controlMode;
         int backlight;
     public:
         TapConfig();
@@ -33,7 +42,7 @@ class TapConfig {
         void setDeviceID(const char *s);
         void setPIN(const char *s);
         void setTapDuration(int i);
-        void setOperatingMode(int i);
+        void setPaymentMode(int i);
         void setBacklight(int i);
 
         const char *getWiFiSSID();
@@ -45,7 +54,10 @@ class TapConfig {
         const char *getDeviceID();
         const char *getPIN();    
         int getTapDuration();
-        int getOperatingMode();
+        int getPaymentMode();
+
+        int getControlMode();
+        void setControlMode(int i);
 };
 
 #endif
