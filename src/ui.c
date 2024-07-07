@@ -464,11 +464,27 @@ void ui_event_KeyboardConfig(lv_event_t * e)
 void ui_event_ButtonConfigBack(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_CLICKED) {
         _ui_screen_change(ui_ScreenConfig, LV_SCR_LOAD_ANIM_NONE, 0, 0);
     }
 }
+
+void ui_event_ButtonConfigServoClose(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonConfigServoCloseClicked(e);
+    }
+}
+
+void ui_event_ButtonConfigServoOpen(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonConfigServoOpenClicked(e);
+    }
+}
+
 
 void ui_event_ScreenBierFlowing(lv_event_t * e)
 {
@@ -1210,18 +1226,18 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelConfigServo, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_TextAreaConfigServoClosed = lv_textarea_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_TextAreaConfigServoClosed, 100);
+    lv_obj_set_width(ui_TextAreaConfigServoClosed, 95);
     lv_obj_set_height(ui_TextAreaConfigServoClosed, LV_SIZE_CONTENT);    /// 70
-    lv_obj_set_x(ui_TextAreaConfigServoClosed, -10);
+    lv_obj_set_x(ui_TextAreaConfigServoClosed, 0);
     lv_obj_set_y(ui_TextAreaConfigServoClosed, 185);
-    lv_obj_set_align(ui_TextAreaConfigServoClosed, LV_ALIGN_TOP_RIGHT);
+    lv_obj_set_align(ui_TextAreaConfigServoClosed, LV_ALIGN_TOP_MID);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigServoClosed, "--");
     lv_textarea_set_one_line(ui_TextAreaConfigServoClosed, true);
 
     ui_TextAreaConfigServoOpen = lv_textarea_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_TextAreaConfigServoOpen, 100);
+    lv_obj_set_width(ui_TextAreaConfigServoOpen, 95);
     lv_obj_set_height(ui_TextAreaConfigServoOpen, LV_SIZE_CONTENT);    /// 70
-    lv_obj_set_x(ui_TextAreaConfigServoOpen, -120);
+    lv_obj_set_x(ui_TextAreaConfigServoOpen, -10);
     lv_obj_set_y(ui_TextAreaConfigServoOpen, 185);
     lv_obj_set_align(ui_TextAreaConfigServoOpen, LV_ALIGN_TOP_RIGHT);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigServoOpen, "--");
@@ -1619,6 +1635,8 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_add_event_cb(ui_KeyboardConfig, ui_event_KeyboardConfig, LV_EVENT_ALL, NULL);
 
     lv_obj_add_event_cb(ui_ButtonPIN, ui_event_ButtonPIN, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonConfigServoClose, ui_event_ButtonConfigServoClose, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonConfigServoOpen, ui_event_ButtonConfigServoOpen, LV_EVENT_ALL, NULL);
 
     lv_obj_add_event_cb(ui_ButtonConfigDone, ui_event_ButtonConfigDone, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonConfigCancel, ui_event_ButtonConfigCancel, LV_EVENT_ALL, NULL);

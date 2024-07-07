@@ -183,13 +183,13 @@ void ButtonCancelPINClicked(lv_event_t * e)
 	lv_obj_add_flag(ui_PanelConfigPIN,LV_OBJ_FLAG_HIDDEN);
 }
 
-void ButtonConfigCloseClicked(lv_event_t * e)
+void ButtonConfigServoCloseClicked(lv_event_t * e)
 {
 	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
 	tapClose(servoClosed);
 }
 
-void ButtonConfigOpenClicked(lv_event_t * e)
+void ButtonConfigServoOpenClicked(lv_event_t * e)
 {
 	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
 	tapOpen(servoOpen);

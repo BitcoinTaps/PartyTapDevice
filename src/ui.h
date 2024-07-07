@@ -151,7 +151,8 @@ void ui_ScreenConfig_screen_init(void);
 void ButtonConfigDoneClicked(lv_event_t *e);
 void ButtonConfigCancelClicked(lv_event_t *e);
 void ButtonConfigUpdateClicked(lv_event_t *e);
-
+void ButtonConfigServoOpenClicked(lv_event_t *e);
+void ButtonConfigServoCloseClicked(lv_event_t *e);
 
 // PIN screen
 void ui_ScreenPin_screen_init(void);

@@ -230,7 +230,7 @@ bool Sensact::initNFC() {
 
 void Sensact::writeI2CServo(int deg) {
 #ifdef DEBUG
-    Serial.printf("[Sensact::writeI2CServo] deg = %d\n",deg)
+    Serial.printf("[Sensact::writeI2CServo] deg = %d\n",deg);
 #endif    
     if ( this->i2c_tap_servo ) {
         this->i2c_tap_servo->write(deg);
@@ -253,6 +253,9 @@ void Sensact::writeI2CRelay(int i) {
 
 
 void Sensact::writeServo(int deg) {
+#ifdef DEBUG
+    Serial.printf("[Sensact::writeServo] deg = %d",deg);
+#endif
     if ( this->tap_servo ) {
         this->tap_servo->write(deg);
 #ifdef DEBUG
