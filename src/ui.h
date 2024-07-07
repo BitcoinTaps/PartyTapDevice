@@ -189,6 +189,11 @@ LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo
 #ifdef BRANDING_BEER
 LV_IMG_DECLARE(ui_img_kanhetal256);    // Kan het al logo
 #endif
+#ifdef BRANDING_VJZGBT
+LV_IMG_DECLARE(ui_img_4jz_grauburgunder_trocken);
+#endif
+
+
 LV_IMG_DECLARE(ui_img_instructions);    // Instructions logo
 
 

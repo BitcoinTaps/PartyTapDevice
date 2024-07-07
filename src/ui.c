@@ -575,6 +575,9 @@ void ui_ScreenAbout_screen_init(void)
 #ifdef BRANDING_BEER
     lv_img_set_src(ui_ImageAbout, &ui_img_kanhetal256);  // Kan het Al
 #endif
+#ifdef BRANDING_VJZGBT
+    lv_img_set_src(ui_ImageAbout, &ui_img_4jz_grauburgunder_trocken); // Vier Jahreszeiten, Grauburgunder Trocken
+#endif
 
     lv_obj_set_width(ui_ImageAbout, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_ImageAbout, LV_SIZE_CONTENT);    /// 256

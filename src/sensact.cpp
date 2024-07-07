@@ -39,16 +39,19 @@ bool Sensact::initServo(int pin) {
 }
 
 bool Sensact::initRelay(int pin) {
+#ifdef DEBUG
+    Serial.println("[Sensact::initRelay]");
+#endif 
     this->_relay_pin = pin;
 
     pinMode(this->_relay_pin,OUTPUT);
-#ifdef DEBUG
-    Serial.println("[Sensact] Relay initialized");
-#endif 
     return true;
 }
 
 void Sensact::writeRelay(int i) {
+#ifdef DEBUG
+    Serial.println("[Sensact::writeRelay]");
+#endif 
     digitalWrite(this->_relay_pin,i);
 }
 
@@ -226,11 +229,14 @@ bool Sensact::initNFC() {
 }
 
 void Sensact::writeI2CServo(int deg) {
+#ifdef DEBUG
+    Serial.printf("[Sensact::writeI2CServo] deg = %d\n",deg)
+#endif    
     if ( this->i2c_tap_servo ) {
         this->i2c_tap_servo->write(deg);
 #ifdef DEBUG
     } else {
-        Serial.println("[Sensact] no servo available for writing");
+        Serial.println("[Sensact::writeI2CServo] no servo available for writing");
 #endif
     }
 }

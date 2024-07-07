@@ -197,7 +197,7 @@ void doFirmwareUpdate() {
 #define FIRMWARE_HOST "firmware.bitcointaps.com"
   snprintf_P(firmware_path, sizeof(firmware_path), PSTR("/partytap/ESP32_3248S035C/%s/firmware_%s.bin"), productConfig.getServerVersion(), productConfig.getServerBranding());
 #ifdef DEBUG
-  Serial.printf("Firmware path %s\n",firmware_path);
+  Serial.printf("[doFirmwareUpdate] Firmware path %s\n",firmware_path);
 #endif
   t_httpUpdate_return ret = httpUpdate.update(client, FIRMWARE_HOST, 443, firmware_path);
   
@@ -213,6 +213,9 @@ void doFirmwareUpdate() {
 }
 
 void tapOpen(int i) {
+#ifdef DEBUG
+  Serial.printf("[tapOpen] i = %d\n",i);
+#endif
   switch ( tapConfig.getControlMode() ) {
     case CONTROL_MODE_SERVO_TIME:
       sensact->writeServo(i);
@@ -235,12 +238,15 @@ void tapOpen(int i) {
 }
 
 void tapClose(int i) {
+#ifdef DEBUG
+  Serial.printf("[tapClose] i = %d\n",i);
+#endif
   switch ( tapConfig.getControlMode() ) {
     case CONTROL_MODE_SERVO_TIME:
       sensact->writeServo(i);
       break;
     case CONTROL_MODE_RELAY_TIME:
-      sensact->writeRelay(HIGH);
+      sensact->writeRelay(LOW);
       break;
     case CONTROL_MODE_I2C_SERVO_TICKS:
     case CONTROL_MODE_I2C_SERVO_TIME:
@@ -248,7 +254,7 @@ void tapClose(int i) {
       break;    
     case CONTROL_MODE_I2C_RELAY_TICKS:
     case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->writeI2CRelay(HIGH);
+      sensact->writeI2CRelay(LOW);
       break;    
     case CONTROL_MODE_NONE:
     default:
