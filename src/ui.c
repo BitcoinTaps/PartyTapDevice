@@ -1175,7 +1175,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_y(ui_TextAreaConfigWifiPassword, 50);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigWifiPassword, "Wi-Fi password");
     lv_textarea_set_one_line(ui_TextAreaConfigWifiPassword, true);
-    lv_textarea_set_password_mode(ui_TextAreaConfigWifiPassword, true);
+    //lv_textarea_set_password_mode(ui_TextAreaConfigWifiPassword, true);
 
     ui_LabelConfigLNbitsHost = lv_label_create(ui_ScreenConfig);
     lv_obj_set_width(ui_LabelConfigLNbitsHost, LV_SIZE_CONTENT);   /// 1

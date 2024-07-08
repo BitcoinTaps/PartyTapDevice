@@ -242,11 +242,14 @@ void Sensact::writeI2CServo(int deg) {
 }
 
 void Sensact::writeI2CRelay(int i) {
+#ifdef DEBUG
+    Serial.printf("[Sensact::writeI2CRelay] i = %d\n",i);
+#endif
     if ( this->i2c_tap_servo ) {
         this->i2c_tap_servo->write(i);
 #ifdef DEBUG
     } else {
-        Serial.println("[Sensact] no relay available for writing");
+        Serial.println("[Sensact::writeI2CRelay] no relay available for writing");
 #endif
     }
 }
@@ -254,13 +257,13 @@ void Sensact::writeI2CRelay(int i) {
 
 void Sensact::writeServo(int deg) {
 #ifdef DEBUG
-    Serial.printf("[Sensact::writeServo] deg = %d",deg);
+    Serial.printf("[Sensact::writeServo] deg = %d\n",deg);
 #endif
     if ( this->tap_servo ) {
         this->tap_servo->write(deg);
 #ifdef DEBUG
     } else {
-        Serial.println("[Sensact] no servo available for writing");
+        Serial.println("[Sensact::writeServo] no servo available for writing");
 #endif
     }
 }

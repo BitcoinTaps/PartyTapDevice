@@ -155,6 +155,9 @@ void fromBeerToAboutPage() {
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_scr_load(ui_ScreenAbout);
+  }
+  if ( ui_ScreenBierFlowing != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_del(ui_ScreenBierFlowing);
   }
   ui_ScreenBierFlowing = NULL;
@@ -370,16 +373,6 @@ void expireInvoice()
 #ifdef DEBUG
   Serial.println("[expireInvoice]");
 #endif
-  // {
-  //   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  //   ui_ScreenAbout_screen_init();
-  //   lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
-  //   configureSwitches();
-  //   lv_disp_load_scr(ui_ScreenAbout);	  
-  //   lv_obj_del(ui_ScreenMain);
-  //   ui_ScreenMain = NULL;
-  // }
-
   expireInvoiceTask.disable();
   if ( sensact->isNFCAvailable() ) {
     checkNFCPaymentTask.disable();
@@ -412,6 +405,9 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_obj_set_x(ui_ButtonMainAbout, 0);
     lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenMain);	
+  }
+  if ( ui_ScreenAbout != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);    
     lv_obj_del(ui_ScreenAbout);
   }
   ui_ScreenAbout = NULL;
@@ -441,6 +437,9 @@ void wantBierClicked(int item) {
   	  lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
       lv_anim_start(&ui_AnimateBierStart);
 		  lv_disp_load_scr(ui_ScreenBierFlowing);
+    }
+    if ( ui_ScreenAbout != NULL ) {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
       lv_obj_del(ui_ScreenAbout);
     }
     ui_ScreenAbout = NULL;
@@ -600,6 +599,9 @@ void wantBierClicked(int item) {
       lv_qrcode_update(ui_QrcodeLnurl, charLnurl, strlen(charLnurl));
       lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
       lv_disp_load_scr(ui_ScreenMain);
+    }
+    if ( ui_ScreenAbout != NULL ) {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);      
       lv_obj_del(ui_ScreenAbout);	
     }
     ui_ScreenAbout = NULL;
@@ -638,6 +640,7 @@ void handlePaid(DynamicJsonDocument *doc) {
 	  lv_disp_load_scr(ui_ScreenBierFlowing);	
   }
   if ( ui_ScreenMain != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_del(ui_ScreenMain);
   }
   ui_ScreenMain = NULL;
@@ -657,11 +660,13 @@ void hidePaymentButtons()
 }
 
 void configureSwitches() {
+  Serial.println("[configureSwitches]");
+
   hidePaymentButtons();
 
   if ( isReadyToServe() == false ) {
 #ifdef DEBUG
-    Serial.println("configureSwitches: Is not ready to serve");
+    Serial.println("[configureSwitches] Is not ready to serve");
 #endif
     return;
   }
@@ -914,17 +919,6 @@ void checkNFCPayment() {
 void checkWiFi() {
   static bool bConnected = false;
   
-  // if ( bDoReconnect ) {
-  //   const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);  
-  //   bDoReconnect = false;
-  //   bConnected = false;
-  //   webSocket.disableHeartbeat();
-  //   webSocket.disconnect();    
-  //   WiFi.disconnect();
-  //   WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
-  // }
-
-  
   if ( ui_ScreenAdmin != NULL ) {
     if ( webSocket.isConnected() ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -945,7 +939,7 @@ void checkWiFi() {
       }
       if ( bConnected == false ) {
 #ifdef DEBUG
-        Serial.println("Connecting WebSocket");
+        Serial.println("[checkWiFi] Connecting WebSocket");
 #endif
         
         config_wspath = "/partytap/api/v1/ws/";
@@ -958,7 +952,7 @@ void checkWiFi() {
       break;
     case WL_NO_SSID_AVAIL:
 #ifdef DEBUG
-      Serial.println("ERROR_CONFIG_SSID");
+      Serial.println("[checkWiFi] ERROR_CONFIG_SSID");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -967,7 +961,7 @@ void checkWiFi() {
       break;
     case WL_CONNECTION_LOST:
 #ifdef DEBUG
-      Serial.println("CONNECTION LOST");
+      Serial.println("[checkWiFi] CONNECTION LOST");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -976,12 +970,12 @@ void checkWiFi() {
       break;
     case WL_IDLE_STATUS:
 #ifdef DEBUG
-      Serial.println("W_IDLE_STATUS");
+      Serial.println("[checkWiFi] W_IDLE_STATUS");
 #endif
       break;
     case WL_DISCONNECTED:
 #ifdef DEBUG
-      Serial.println("WL_DISCONNECTED");
+      Serial.println("[checkWiFi] WL_DISCONNECTED");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -990,7 +984,7 @@ void checkWiFi() {
       break;
     case WL_NO_SHIELD:
 #ifdef DEBUG
-      Serial.println("Wi-Fi device not initialized");
+      Serial.println("[checkWiFi] WL_NO_SHIELD");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -999,7 +993,7 @@ void checkWiFi() {
       break;
     case WL_CONNECT_FAILED:
 #ifdef DEBUG
-      Serial.println("WL_CONNECT_FAILED");
+      Serial.println("[checkWiFi] WL_CONNECT_FAILED");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -1008,7 +1002,7 @@ void checkWiFi() {
       break;
     default:
 #ifdef DEBUG
-      Serial.printf("Unknown WiFi state %d\n",status);
+      Serial.printf("[checkWiFi] Unknown WiFi state %d\n",status);
 #endif
       break;
     }
