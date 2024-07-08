@@ -81,9 +81,11 @@ Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 
 void setPanelMainMessage(const char *s,int timeout)  {
   if ( ui_ScreenMain != NULL ) {
-    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-    lv_label_set_text(ui_LabelMainMessage, s);  
-    lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelMainMessage, s);  
+      lv_obj_clear_flag(ui_PanelMainMessage, LV_OBJ_FLAG_HIDDEN);    
+    }
     hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
   }
 }
@@ -111,43 +113,50 @@ void firmwareUpdateError(int err) {
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     switch (err ) {
-    case HTTP_UE_NO_PARTITION:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("NO PARTITION"));
-      break;
-    case HTTP_UE_BIN_FOR_WRONG_FLASH:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("WRONG FLASH"));
-      break;
-    case HTTP_UE_BIN_VERIFY_HEADER_FAILED:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("VERIFY FAILED"));
-      break;
-    case HTTP_UE_SERVER_FAULTY_MD5:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("HASH ERROR"));
-      break;
-    case HTTP_UE_SERVER_WRONG_HTTP_CODE:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("BAD SERVER RESPONSE"));      
-      break;
-    case HTTP_UE_SERVER_FORBIDDEN:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ALLOWED"));
-      break;
-    case HTTP_UE_SERVER_FILE_NOT_FOUND:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("FILE NOT FOUND"));
-      break;
-    case HTTP_UE_SERVER_NOT_REPORT_SIZE:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("SIZE NOT REPORTED"));
-      break;
-    case HTTP_UE_TOO_LESS_SPACE:
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ENOUGH SPACE"));
-      break;
-    default:
-      break;
+      case HTTP_UE_NO_PARTITION:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("NO PARTITION"));
+        break;
+      case HTTP_UE_BIN_FOR_WRONG_FLASH:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("WRONG FLASH"));
+        break;
+      case HTTP_UE_BIN_VERIFY_HEADER_FAILED:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("VERIFY FAILED"));
+        break;
+      case HTTP_UE_SERVER_FAULTY_MD5:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("HASH ERROR"));
+        break;
+      case HTTP_UE_SERVER_WRONG_HTTP_CODE:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("BAD SERVER RESPONSE"));      
+        break;
+      case HTTP_UE_SERVER_FORBIDDEN:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ALLOWED"));
+        break;
+      case HTTP_UE_SERVER_FILE_NOT_FOUND:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("FILE NOT FOUND"));
+        break;
+      case HTTP_UE_SERVER_NOT_REPORT_SIZE:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("SIZE NOT REPORTED"));
+        break;
+      case HTTP_UE_TOO_LESS_SPACE:
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("NOT ENOUGH SPACE"));
+        break;
+      default:
+        break;
+    }
   }
 }
 
 void fromBeerToAboutPage() {
-  ui_ScreenAbout_screen_init();
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenAbout_screen_init();
+  }
   configureSwitches();
-  lv_scr_load(ui_ScreenAbout);
-  lv_obj_del(ui_ScreenBierFlowing);
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_scr_load(ui_ScreenAbout);
+    lv_obj_del(ui_ScreenBierFlowing);
+  }
   ui_ScreenBierFlowing = NULL;
 }
 
@@ -295,13 +304,17 @@ void notifyOrderFulfilled()
 // update the slider of the progress bar while tapping
 void updateBeerTapProgress()
 {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
-
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_bar_set_value(ui_BarBierProgress,beerTapProgressTask.getRunCounter(), LV_ANIM_OFF);
+  }
   if (beerTapProgressTask.isLastIteration() ) {
     tapStop();
     notifyOrderFulfilled();
-    lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+    }
     fromBeerToAboutPageTask.restartDelayed(TASK_SECOND * 3);
   }
 } 
@@ -400,8 +413,8 @@ void showInvoice(DynamicJsonDocument *doc)
     lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
     lv_disp_load_scr(ui_ScreenMain);	
     lv_obj_del(ui_ScreenAbout);
-    ui_ScreenAbout = NULL;
   }
+  ui_ScreenAbout = NULL;
 }
 
 // called from LVGL thread
@@ -420,14 +433,17 @@ void wantBierClicked(int item) {
 
   if ((freeTap ==true)||( productConfig.getProduct(selectedItem)->getAmount() == 0 )) {
     freeTap = false;
-	  ui_ScreenBierFlowing_screen_init();
-  	lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
-		lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
-  	lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
-    lv_anim_start(&ui_AnimateBierStart);
-		lv_disp_load_scr(ui_ScreenBierFlowing);	
-  	lv_obj_del(ui_ScreenAbout);
-  	ui_ScreenAbout = NULL;
+  	{
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      ui_ScreenBierFlowing_screen_init();
+      lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
+		  lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
+  	  lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
+      lv_anim_start(&ui_AnimateBierStart);
+		  lv_disp_load_scr(ui_ScreenBierFlowing);
+      lv_obj_del(ui_ScreenAbout);
+    }
+    ui_ScreenAbout = NULL;
     return;
   }
   
@@ -574,7 +590,6 @@ void wantBierClicked(int item) {
     // Update UI
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-      
       ui_ScreenMain_screen_init();
       lv_label_set_text(ui_LabelHeaderMain, "PAY FOR YOUR DRINK");
       lv_obj_set_x(ui_ButtonMainAbout, -70);
@@ -586,8 +601,8 @@ void wantBierClicked(int item) {
       lv_obj_clear_flag(ui_QrcodeLnurl,LV_OBJ_FLAG_HIDDEN);
       lv_disp_load_scr(ui_ScreenMain);
       lv_obj_del(ui_ScreenAbout);	
-      ui_ScreenAbout = NULL;
     }
+    ui_ScreenAbout = NULL;
     expireInvoiceTask.restartDelayed(TASK_SECOND * 180);
   }
 
@@ -624,8 +639,8 @@ void handlePaid(DynamicJsonDocument *doc) {
   }
   if ( ui_ScreenMain != NULL ) {
     lv_obj_del(ui_ScreenMain);
-    ui_ScreenMain = NULL;
   }
+  ui_ScreenMain = NULL;
 }
 
 void hidePaymentButtons()
@@ -664,7 +679,6 @@ void configureSwitches() {
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-
         lv_anim_start(&ui_AnimateAboutOne);
       }
       break;
@@ -913,9 +927,11 @@ void checkWiFi() {
   
   if ( ui_ScreenAdmin != NULL ) {
     if ( webSocket.isConnected() ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: connected");
     } else {
         lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: disconnected");
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     }
 
   }
@@ -924,6 +940,7 @@ void checkWiFi() {
   switch ( status ) {
     case WL_CONNECTED:
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connected");
       }
       if ( bConnected == false ) {
@@ -944,6 +961,7 @@ void checkWiFi() {
       Serial.println("ERROR_CONFIG_SSID");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: SSID not found");
       }
       break;
@@ -952,6 +970,7 @@ void checkWiFi() {
       Serial.println("CONNECTION LOST");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connection lost");
       }
       break;
@@ -965,6 +984,7 @@ void checkWiFi() {
       Serial.println("WL_DISCONNECTED");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: disconnected");
       }
       break;
@@ -973,6 +993,7 @@ void checkWiFi() {
       Serial.println("Wi-Fi device not initialized");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: no device");
       }
       break;
@@ -981,6 +1002,7 @@ void checkWiFi() {
       Serial.println("WL_CONNECT_FAILED");
 #endif
       if ( ui_ScreenAdmin != NULL ) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWiFiStatus,"WiFi Status: connect failed");
       }
       break;
