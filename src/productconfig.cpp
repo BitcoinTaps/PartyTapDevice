@@ -46,9 +46,6 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
 
     this->numProducts = 0;
     
-#ifdef DEBUG
-    Serial.printf("[ProductConfig::parse] num products = %d\n",this->numProducts);
-#endif
 
     if ( doc->containsKey("version")) {
         this->serverVersion = (*doc)["version"].as<const char *>();
@@ -80,6 +77,9 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
 
     JsonArray switches = (*doc)["switches"].as<JsonArray>();
     this->numProducts = switches.size() < PARTYTAP_CFG_MAX_PRODUCTS ? switches.size() : PARTYTAP_CFG_MAX_PRODUCTS;
+#ifdef DEBUG
+    Serial.printf("[ProductConfig::parse] num products = %d\n",this->numProducts);
+#endif
 
     for (int i=0;i < this->numProducts;i++) {
         JsonObject obj = switches[i];
@@ -94,7 +94,7 @@ bool ProductConfig::parse(DynamicJsonDocument *doc) {
 
 
 #ifdef DEBUG
-    Serial.println("ProductCondig::parse finished");
+    Serial.println("[ProductConfig::parse] succesfully completed");
 #endif
 
     return true;

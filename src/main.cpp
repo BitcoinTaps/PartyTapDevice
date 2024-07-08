@@ -170,25 +170,33 @@ void startFirmwareUpdate() {
 }
 
 bool isReadyToServe() {
-  if ( productConfig.getNumProducts() == 0 ) {
 #ifdef DEBUG
-    Serial.println("[isReadyToServe] productConfig.getNumProducts returned 0");
+    Serial.println("[isReadyToServe]");
 #endif
+  if ( productConfig.getNumProducts() == 0 ) {
     return false;    
   }
 
   switch ( tapConfig.getPaymentMode() ) {
     case PAYMENT_MODE_ONLINE:
       if ( webSocket.isConnected() ) {
+#ifdef DEBUG
+    Serial.println("[isReadyToServe] webSocket.isConnected() == true, Ready To Serve!");
+#endif
         return true;
       }    
       break;
     case PAYMENT_MODE_AUTO:
     case PAYMENT_MODE_OFFLINE:
+#ifdef DEBUG
+    Serial.println("[isReadyToServe] Payment Mode is AUTO or OFFLINE");
+#endif
       return true;      
       break;
   }
-  
+#ifdef DEBUG
+    Serial.println("[isReadyToServe] Not ready to serve");
+#endif  
   return false;
 }
 
@@ -665,9 +673,6 @@ void configureSwitches() {
   hidePaymentButtons();
 
   if ( isReadyToServe() == false ) {
-#ifdef DEBUG
-    Serial.println("[configureSwitches] Is not ready to serve");
-#endif
     return;
   }
 
