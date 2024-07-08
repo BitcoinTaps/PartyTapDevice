@@ -89,22 +89,28 @@ void setPanelMainMessage(const char *s,int timeout)  {
 }
 
 void firmwareUpdateFinished() {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_label_set_text(ui_LabelAboutMessage, STR_RESTARTING);
+  if ( ui_ScreenAbout != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_label_set_text(ui_LabelAboutMessage, STR_RESTARTING);
+  }
 }
 
 void firmwareUpdateProgress(int cur, int total) {
   static char message[25];
   snprintf_P(message, sizeof(message), PSTR("UPDATE PROGRESS %d%%"), 100 * cur / total);
-  {
+  if ( ui_ScreenAbout != NULL ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_label_set_text(ui_LabelAboutMessage, message);
   }
 }
 
 void firmwareUpdateError(int err) {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  switch (err ) {
+  if ( ui_ScreenAbout == NULL ) {
+    return;
+  }
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    switch (err ) {
     case HTTP_UE_NO_PARTITION:
       lv_label_set_text(ui_LabelAboutMessage, PSTR("NO PARTITION"));
       break;
@@ -332,14 +338,18 @@ void make_lnurlw_withdraw(const char *lnurlw) {
 
 void hidePanelAboutMessage()
 {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+  if ( ui_ScreenAbout != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+  }
 }
 
 void hidePanelMainMessage()
 {
-  const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-  lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
+  if ( ui_ScreenMain != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_add_flag(ui_PanelMainMessage,LV_OBJ_FLAG_HIDDEN);
+  }
 }
 
 void expireInvoice()
@@ -611,6 +621,8 @@ void handlePaid(DynamicJsonDocument *doc) {
 	  lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
     lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
 	  lv_disp_load_scr(ui_ScreenBierFlowing);	
+  }
+  if ( ui_ScreenMain != NULL ) {
     lv_obj_del(ui_ScreenMain);
     ui_ScreenMain = NULL;
   }
