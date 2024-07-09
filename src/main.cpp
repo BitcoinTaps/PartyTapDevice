@@ -59,27 +59,34 @@ void notifyOrderReceived();
 void checkWiFi();
 void doFirmwareUpdate();
 void hidePanelMainMessage();
+void hidePanelAboutMessage();
 void expireInvoice();
 void checkNFCPayment();
 void updateBeerTapProgress();
 void fromBeerToAboutPage();
+void fromMainToAboutPage();
+void checkInvoiceReceived();
 void loop0(void *parameters);
 
 // task scheduler
 Scheduler taskScheduler;
 Task checkWiFiTask(4 * TASK_SECOND, TASK_FOREVER, &checkWiFi);
 Task hidePanelMainMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelMainMessage);
+Task hidePanelAboutMessageTask(TASK_IMMEDIATE, TASK_ONCE, &hidePanelAboutMessage);
 Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task fromBeerToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &fromBeerToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
 Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &doFirmwareUpdate);
 Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
-
+Task checkInvoiceReceivedTask(TASK_IMMEDIATE, TASK_ONCE, &checkInvoiceReceived);
 
 
 
 
 void setPanelMainMessage(const char *s,int timeout)  {
+#ifdef DEBUG
+  Serial.printf("[setPanelMainMessage] message = %s, timeout = %d\n",s,timeout);
+#endif
   if ( ui_ScreenMain != NULL ) {
     {
       const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -89,6 +96,22 @@ void setPanelMainMessage(const char *s,int timeout)  {
     hidePanelMainMessageTask.restartDelayed(TASK_SECOND * timeout);
   }
 }
+
+void setPanelAboutMessage(const char *s,int timeout)  {
+#ifdef DEBUG
+  Serial.printf("[setPanelAboutMessage] message = %s, timeout = %d\n",s,timeout);
+#endif
+
+  if ( ui_ScreenAbout != NULL ) {
+    {
+      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+      lv_label_set_text(ui_LabelAboutMessage, s);  
+      lv_obj_clear_flag(ui_PanelAboutMessage, LV_OBJ_FLAG_HIDDEN);    
+    }
+    hidePanelAboutMessageTask.restartDelayed(TASK_SECOND * timeout);
+  }
+}
+
 
 void firmwareUpdateFinished() {
   if ( ui_ScreenAbout != NULL ) {
@@ -147,6 +170,9 @@ void firmwareUpdateError(int err) {
 }
 
 void fromBeerToAboutPage() {
+#ifdef DEBUG
+  Serial.println("[fromBeerToAboutPage]");
+#endif
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     ui_ScreenAbout_screen_init();
@@ -162,6 +188,27 @@ void fromBeerToAboutPage() {
   }
   ui_ScreenBierFlowing = NULL;
 }
+
+void fromMainToAboutPage() {
+#ifdef DEBUG
+  Serial.println("[fromMainToAboutPage]");
+#endif
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    ui_ScreenAbout_screen_init();
+  }
+  configureSwitches();
+  {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_scr_load(ui_ScreenAbout);
+  }
+  if ( ui_ScreenMain != NULL ) {
+    const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+    lv_obj_del(ui_ScreenMain);
+  }
+  ui_ScreenMain = NULL;
+}
+
 
 void startFirmwareUpdate() {
   delay(1000);
@@ -198,6 +245,20 @@ bool isReadyToServe() {
     Serial.println("[isReadyToServe] Not ready to serve");
 #endif  
   return false;
+}
+
+// This function is triggered by a taskscheduler at the moment an invoice is requested
+// if the invoice is not received for some reason, the user is taken back to the 
+// start screen with a message that no invoice was received
+void checkInvoiceReceived() {
+#ifdef DEBUG
+  Serial.println("[checkInvoiceReceived]");
+#endif  
+
+  fromMainToAboutPage();
+
+  setPanelAboutMessage("NO INVOICE RECEIVED",3);
+
 }
 
 void doFirmwareUpdate() {
@@ -352,6 +413,9 @@ void beerStart()
 }
 
 void make_lnurlw_withdraw(const char *lnurlw) {
+#ifdef DEBUG
+  Serial.println("[make_lnurlw_withdraw]");
+#endif
   String wsmessage = PSTR("{\"event\":\"lnurlw\",\"payment_request\":\""); 
   wsmessage += payment_request;
   wsmessage += PSTR("\",\"lnurlw\":\"");
@@ -362,6 +426,9 @@ void make_lnurlw_withdraw(const char *lnurlw) {
 
 void hidePanelAboutMessage()
 {
+#ifdef DEBUG
+  Serial.println("[hidePanelAboutMessage]");
+#endif
   if ( ui_ScreenAbout != NULL ) {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
@@ -431,7 +498,7 @@ void wantBierClicked(int item) {
   payment_hash = "";
   payment_request = "";
   payment_pin = "";
-  
+    
   // set tap duration to default
   tap_duration = productConfig.getProduct(selectedItem)->getTapDuration();
 
@@ -460,10 +527,15 @@ void wantBierClicked(int item) {
     wsmessage +=  productConfig.getProduct(selectedItem)->getSwitchID();
     wsmessage += PSTR("\"}");
 
-    if ( webSocket.sendTXT(wsmessage) ) {
-      const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
-      lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
-      lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+    
+    if ( webSocket.sendTXT(wsmessage) )
+    {
+      checkInvoiceReceivedTask.restartDelayed(TASK_SECOND * 15);
+      {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+        lv_label_set_text(ui_LabelAboutMessage, PSTR("CREATING INVOICE"));
+        lv_obj_clear_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
+      }
     }
   } else if (( tapConfig.getPaymentMode() == PAYMENT_MODE_OFFLINE ) || ( tapConfig.getPaymentMode() == PAYMENT_MODE_AUTO )) {
     // take the offline route
@@ -763,6 +835,7 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           productConfig.save();
           configureSwitches();
         } else if ( strcmp(event,STR_INVOICE) == 0 ) {
+          checkInvoiceReceivedTask.disable();
           showInvoice(&doc);
         } else if ( strcmp(event,"paid") == 0 ) {     
           setPanelMainMessage(PSTR("PAYMENT SUCCES"),3);
@@ -845,9 +918,11 @@ void setup()
   taskScheduler.addTask(checkNFCPaymentTask);
   taskScheduler.addTask(checkUpdateTask);
   taskScheduler.addTask(hidePanelMainMessageTask);
+  taskScheduler.addTask(hidePanelAboutMessageTask);
   taskScheduler.addTask(expireInvoiceTask);
   taskScheduler.addTask(fromBeerToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
+  taskScheduler.addTask(checkInvoiceReceivedTask);
 
   // init filesystem and load config
   LittleFS.begin(true);

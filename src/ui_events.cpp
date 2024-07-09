@@ -31,16 +31,22 @@ void ButtonPinNumberClicked(lv_event_t * e)
 
 void ButtonPinCancelClicked(lv_event_t * e)
 {
+#ifdef DEBUG
+	Serial.println("[ButtonPinCancelClicked]");
+#endif
 	// Your code here
 	if ( entered_pin.length() == 0 ) {
 		ui_ScreenAbout_screen_init();
 		configureSwitches();
-		lv_disp_load_scr(ui_ScreenAbout);		
-		lv_obj_del(ui_ScreenPin);
+		lv_disp_load_scr(ui_ScreenAbout);
+		if ( ui_ScreenPin != NULL ) {		
+			lv_obj_del(ui_ScreenPin);
+		}
 		ui_ScreenPin = NULL;
+	} else {
+		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 	}
 	entered_pin = "";
-	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 }
 
 void ButtonPinOKClicked(lv_event_t * e)
@@ -135,7 +141,7 @@ void ButtonConfigDoneClicked(lv_event_t * e)
 	
 	tapConfig.save();
 
-	lv_obj_del(ui_ScreenConfig);
+	//lv_obj_del(ui_ScreenConfig);
 
 	restartTap();
 }
@@ -238,16 +244,31 @@ void ButtonBierStartClicked(lv_event_t *e )
 
 void ButtonAboutOneClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(0);
 }
 
 void ButtonAboutTwoClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(1);
 }
 
 void ButtonAboutThreeClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(2);
 }
 
@@ -255,6 +276,9 @@ void ButtonMainBackClicked(lv_event_t *e) {
 #ifdef DEBUG
 	Serial.println("[ButtonMainBackClicked]");
 #endif
+    lv_obj_add_flag(ui_ButtonMainAbout,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
 	expireInvoice();
 	ui_ScreenAbout_screen_init();
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
@@ -268,6 +292,9 @@ void ButtonMainEnterPINClicked(lv_event_t *e) {
 #ifdef DEBUG
 	Serial.println("[ButtonMainEnterPINClicked]");
 #endif
+    lv_obj_add_flag(ui_ButtonMainAbout,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
     entered_pin = "";
 	ui_ScreenPin_screen_init();
     lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
