@@ -48,7 +48,7 @@ bool I2CServo::sendCommand(int cmd, int arg, int len) {
 }
 
 bool I2CServo::sendCommand(int cmd) {
-    return this->sendCommand(SERVO_DETACH,0,0);
+    return this->sendCommand(cmd,0,0);
 }
 
 
