@@ -5,16 +5,20 @@ Sensact::Sensact() {
 }
 
 bool Sensact::initI2C(int sda, int scl, int bus) {
+#ifdef DEBUG
+        Serial.println("[Sensact::initI2C]");
+#endif 
     this->_wire = new TwoWire(bus);
+    //this->_wire->setClock(400000);
 
     if (this->_wire->begin(TAP_I2C_SDA, TAP_I2C_SCL) ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] Succesfully initialized I2C bus");
+        Serial.println("[Sensact::initI2C] Succesfully initialized I2C bus");
 #endif 
         return true;
     } else {
 #ifdef DEBUG
-        Serial.println("[Sensact] Failure initializing I2C bus");
+        Serial.println("[Sensact::initI2C] Failure initializing I2C bus");
 #endif 
         return false;
     }
@@ -22,10 +26,10 @@ bool Sensact::initI2C(int sda, int scl, int bus) {
 }
 
 bool Sensact::initServo(int pin) {
-    if ( this->tap_servo != NULL ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] Servo already initialized");
+        Serial.printf("[Sensact::initServo] pin = %d\n",pin);
 #endif 
+    if ( this->tap_servo != NULL ) {
         return false;
     }
 
@@ -42,24 +46,34 @@ bool Sensact::initRelay(int pin) {
 #ifdef DEBUG
     Serial.println("[Sensact::initRelay]");
 #endif 
-    this->_relay_pin = pin;
+    this->relayPin = pin;
 
-    pinMode(this->_relay_pin,OUTPUT);
+    pinMode(this->relayPin,OUTPUT);
     return true;
 }
 
-void Sensact::writeRelay(int i) {
+void Sensact::relayHigh() {
 #ifdef DEBUG
-    Serial.println("[Sensact::writeRelay]");
+    Serial.println("[Sensact::relayHIGH]");
 #endif 
-    digitalWrite(this->_relay_pin,i);
+    digitalWrite(this->relayPin,HIGH);
+}
+
+void Sensact::relayLow() {
+#ifdef DEBUG
+    Serial.println("[Sensact::relayLow]");
+#endif 
+    digitalWrite(this->relayPin,LOW);
 }
 
 
 bool Sensact::scanI2CAddress(int address) {
+#ifdef DEBUG
+        Serial.printf("[Sensact::scanI2CAddress] address = %d\n",address);
+#endif 
     if ( this->_wire == NULL ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] I2C bus not initialized");
+        Serial.println("[Sensact::scanI2CAddress] I2C bus not initialized");
 #endif
         return false;
     }
@@ -70,95 +84,93 @@ bool Sensact::scanI2CAddress(int address) {
     switch ( error ) {
         case 0:
 #ifdef DEBUG
-            Serial.println("[Sensact] device detected on bus");
-            Serial.println(address);
+            Serial.printf("[Sensact::scanI2CAddress] device detected on bus at %d\n",address);
 #endif
             return true;
         case 2:
 #ifdef DEBUG
-            Serial.println("[Sensact] device not detected on bus");
+            Serial.println("[Sensact::scanI2CAddress] device not detected on bus");
 #endif
             return false;
         default:
 #ifdef DEBUG
-            Serial.println("[Sensact] I2C bus error");
+            Serial.println("[Sensact::scanI2CAddress] I2C bus error");
 #endif
             return false;
     }
 }
 
-bool Sensact::initI2CRelay(int address, int pin) {
-    if ( this->i2c_tap_servo != NULL ) {
+bool Sensact::initI2CExtender(int address) {
+    if ( this->extender != NULL ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] relay already initialized");
+        Serial.println("[Sensact::initI2CExtender] extender already present");
 #endif
         return false;
     }
 
     if ( ! this->scanI2CAddress(address) ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] relay not found on bus");
+        Serial.println("[Sensact::initI2CExtender] extender not found");
 #endif
         return false;
     } else {
 #ifdef DEBUG
-        Serial.println("[Sensact] relay detected on bus");
+        Serial.println("[Sensact::initI2CExtender] extender found");
 #endif
     }
     
-    this->i2c_tap_servo = new I2CServo(this->_wire,address);
+    this->extender= new I2CExtender(this->_wire,address);
+    return true;
+}
+
+
+bool Sensact::initI2CRelay(int pin) {
+    if ( this->extender == NULL ) {
+#ifdef DEBUG
+        Serial.println("[Sensact::initI2CExtender] extender not present");
+#endif
+        return false;
+    }
+
     
     // start in relay mode
-    if ( this->i2c_tap_servo->relay(pin) ) {
+    if ( this->extender->relayAttach(pin) ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] relay attached");
+        Serial.println("[Sensact::initI2CRelay] relay attached");
 #endif
         return true;
     }
 
     // on failure, delete servo
 #ifdef DEBUG
-    Serial.println("[Sensact] Failed to initialize tap servo on I2C");
+    Serial.println("[Sensact::initI2CRelay] Failed to initialize relay");
 #endif
-    delete this->i2c_tap_servo;
-    this->i2c_tap_servo = NULL;
     return false;
 }
 
-bool Sensact::initI2CServo(int address, int pin) {
-    if ( this->i2c_tap_servo != NULL ) {
+bool Sensact::initI2CServo(int pin) {
 #ifdef DEBUG
-        Serial.println("[Sensact] servo already initialized");
+        Serial.printf("[Sensact::initI2CServo] pin = %d\n",pin);
+#endif 
+    if ( this->extender == NULL ) {
+#ifdef DEBUG
+        Serial.println("[Sensact::initI2CServo] extender not available");
 #endif
         return false;
     }
 
-    if ( ! this->scanI2CAddress(address) ) {
-#ifdef DEBUG
-        Serial.println("[Sensact] tap servo not found on bus");
-#endif
-        return false;
-    } else {
-#ifdef DEBUG
-        Serial.println("[Sensact] servo detected on bus");
-#endif
-    }
     
-    this->i2c_tap_servo = new I2CServo(this->_wire,address);
-    
-    if ( this->i2c_tap_servo->attach(pin) ) {
+    if ( this->extender->servoAttach(pin) ) {
 #ifdef DEBUG
-        Serial.println("[Sensact] servo attached");
+        Serial.println("[Sensact::initI2CServo] servo attached");
 #endif
         return true;
     }
 
-    // on failure, delete servo
+//    // on failure, delete servo
 #ifdef DEBUG
-    Serial.println("[Sensact] Failed to initialize tap servo on I2C");
+    Serial.println("[Sensact::initI2CServo] Failed to initialize tap servo on I2C");
 #endif
-    delete this->i2c_tap_servo;
-    this->i2c_tap_servo = NULL;
     return false;
 }    
 
@@ -228,32 +240,46 @@ bool Sensact::initNFC() {
     return true;
 }
 
+void Sensact::relayI2CHigh() {
+#ifdef DEBUG
+    Serial.printf("[Sensact::relayI2CHigh]\n");
+#endif    
+    if ( this->extender != NULL ) {
+        this->extender->relayHigh();
+#ifdef DEBUG
+    } else {
+        Serial.println("[Sensact::relayI2CHigh] relay not available");
+#endif
+    }
+}
+
+void Sensact::relayI2CLow() {
+#ifdef DEBUG
+    Serial.printf("[Sensact::relayI2CLow]\n");
+#endif    
+    if ( this->extender != NULL ) {
+        this->extender->relayLow();
+#ifdef DEBUG
+    } else {
+        Serial.println("[Sensact::relayI2CLow] relay not available");
+#endif
+    }
+}
+
+
+
 void Sensact::writeI2CServo(int deg) {
 #ifdef DEBUG
     Serial.printf("[Sensact::writeI2CServo] deg = %d\n",deg);
 #endif    
-    if ( this->i2c_tap_servo ) {
-        this->i2c_tap_servo->write(deg);
+    if ( this->extender != NULL  ) {
+        this->extender->servoWrite(deg);
 #ifdef DEBUG
     } else {
         Serial.println("[Sensact::writeI2CServo] no servo available for writing");
 #endif
     }
 }
-
-void Sensact::writeI2CRelay(int i) {
-#ifdef DEBUG
-    Serial.printf("[Sensact::writeI2CRelay] i = %d\n",i);
-#endif
-    if ( this->i2c_tap_servo ) {
-        this->i2c_tap_servo->write(i);
-#ifdef DEBUG
-    } else {
-        Serial.println("[Sensact::writeI2CRelay] no relay available for writing");
-#endif
-    }
-}
-
 
 void Sensact::writeServo(int deg) {
 #ifdef DEBUG

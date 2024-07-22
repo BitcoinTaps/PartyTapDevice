@@ -10,7 +10,6 @@
 #include <HTTPUpdate.h>
 #include <WiFiClientSecure.h>
 #include <Wire.h>
-#include <I2CServo.h>
 #include <mutex>
 #include <tapconfig.h>
 #include <tapproduct.h>
@@ -308,7 +307,7 @@ void tapOpen(int i) {
       sensact->writeServo(i);
       break;
     case CONTROL_MODE_RELAY_TIME:
-      sensact->writeRelay(HIGH);
+      sensact->relayHigh();
       break;
     case CONTROL_MODE_I2C_SERVO_TICKS:
     case CONTROL_MODE_I2C_SERVO_TIME:
@@ -316,7 +315,7 @@ void tapOpen(int i) {
       break;    
     case CONTROL_MODE_I2C_RELAY_TICKS:
     case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->writeI2CRelay(HIGH);
+      sensact->relayI2CHigh();
       break;    
     case CONTROL_MODE_NONE:
     default:
@@ -333,7 +332,7 @@ void tapClose(int i) {
       sensact->writeServo(i);
       break;
     case CONTROL_MODE_RELAY_TIME:
-      sensact->writeRelay(LOW);
+      sensact->relayLow();
       break;
     case CONTROL_MODE_I2C_SERVO_TICKS:
     case CONTROL_MODE_I2C_SERVO_TIME:
@@ -341,7 +340,7 @@ void tapClose(int i) {
       break;    
     case CONTROL_MODE_I2C_RELAY_TICKS:
     case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->writeI2CRelay(LOW);
+      sensact->relayI2CLow();
       break;    
     case CONTROL_MODE_NONE:
     default:
@@ -958,12 +957,14 @@ void setup()
       break;
     case CONTROL_MODE_I2C_SERVO_TIME:
       sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
-      sensact->initI2CServo(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
+      sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
+      sensact->initI2CServo(TAP_I2C_SERVO_PIN);
       sensact->initNFC();
       break;
     case CONTROL_MODE_I2C_RELAY_TIME:
       sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
-      sensact->initI2CRelay(TAP_I2C_TAP_ADDRESS,TAP_I2C_SERVO_PIN);
+      sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
+      sensact->initI2CRelay(TAP_I2C_RELAY_PIN);
       sensact->initNFC();
       break;
     default:

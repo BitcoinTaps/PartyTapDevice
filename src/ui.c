@@ -594,6 +594,9 @@ void ui_ScreenAbout_screen_init(void)
 #ifdef BRANDING_VJZGBT
     lv_img_set_src(ui_ImageAbout, &ui_img_4jz_grauburgunder_trocken); // Vier Jahreszeiten, Grauburgunder Trocken
 #endif
+#ifdef BRANDING_BONANZA
+    lv_img_set_src(ui_ImageAbout, &ui_img_meetup_bonanza_256); // Vier Jahreszeiten, Grauburgunder Trocken
+#endif
 
     lv_obj_set_width(ui_ImageAbout, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_ImageAbout, LV_SIZE_CONTENT);    /// 256

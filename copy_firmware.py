@@ -22,6 +22,7 @@ shutil.copyfile(f"{build_dir}/firmware.bin",f"{firmware_dir}/firmware_BITCOINTAP
 shutil.copyfile(f"{build_dir}_NONE/firmware.bin",f"{firmware_dir}/firmware_NONE.bin")
 shutil.copyfile(f"{build_dir}_BEER/firmware.bin",f"{firmware_dir}/firmware_BEER.bin")
 shutil.copyfile(f"{build_dir}_VJZGBT/firmware.bin",f"{firmware_dir}/firmware_VJZGBT.bin")
+shutil.copyfile(f"{build_dir}_BONANZA/firmware.bin",f"{firmware_dir}/firmware_BONANZA.bin")
          
 # update tasks.py
 with open(f"{lnbits_dir}/tasks.py") as file:

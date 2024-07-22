@@ -109,11 +109,11 @@ void ButtonConfigDoneClicked(lv_event_t * e)
     	tapConfig.setControlMode(CONTROL_MODE_RELAY_TIME);
   	} else if ( strncasecmp(buf,"I2C Servo, Time",15) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TIME);
-  	} else if ( strncasecmp(buf,"I2C_Relay, Time",15) == 0 ) {
+  	} else if ( strncasecmp(buf,"I2C Relay, Time",15) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TIME);
   	} else if ( strncasecmp(buf,"I2C Servo, Ticks",16) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TICKS);
-  	} else if ( strncasecmp(buf,"I2C_Relay, Ticks",16) == 0 ) {
+  	} else if ( strncasecmp(buf,"I2C Relay, Ticks",16) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TICKS);
   	} else {
     	tapConfig.setControlMode(CONTROL_MODE_NONE);

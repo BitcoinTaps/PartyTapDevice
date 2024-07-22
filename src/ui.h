@@ -193,6 +193,9 @@ LV_IMG_DECLARE(ui_img_kanhetal256);    // Kan het al logo
 #ifdef BRANDING_VJZGBT
 LV_IMG_DECLARE(ui_img_4jz_grauburgunder_trocken);
 #endif
+#ifdef BRANDING_BONANZA
+LV_IMG_DECLARE(ui_img_meetup_bonanza_256);
+#endif
 
 
 LV_IMG_DECLARE(ui_img_instructions);    // Instructions logo
