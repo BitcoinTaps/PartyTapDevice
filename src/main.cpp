@@ -261,7 +261,7 @@ void checkInvoiceReceived() {
 }
 
 void doFirmwareUpdate() {
-  static char firmware_path[100];
+  static char firmware_path[200];
   if ( ! bDoUpdate ) {
     return;
   }
@@ -997,13 +997,30 @@ void checkNFCPayment() {
   sensact->readNFC(NFC_TIMEOUT,nfcReadCallback,nfcReadSucces);
 }
 
+bool httpsHostReachable(const char *hostname) {
+  static char url[200];
+  snprintf_P(url, sizeof(url), "https://%s/", hostname);
+ 
+  HTTPClient http;
+  http.begin(url);
+  int responseCode = http.GET();
+  if ( responseCode > 0 ) {
+    return true;
+  }
+  return false;
+}
+
 void checkWiFi() {
   static bool bConnected = false;
+  wl_status_t wifiStatus = WiFi.status();
   
   if ( ui_ScreenAdmin != NULL ) {
     if ( webSocket.isConnected() ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
         lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: connected");
+    } else if (( wifiStatus == WL_CONNECTED ) &&  ( httpsHostReachable(tapConfig.getLNbitsHost()) == false )) {
+        const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
+        lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: LNbits host not found");    
     } else {
         lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: disconnected");
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -1011,8 +1028,7 @@ void checkWiFi() {
 
   }
 
-  wl_status_t status = WiFi.status();
-  switch ( status ) {
+  switch ( wifiStatus ) {
     case WL_CONNECTED:
       if ( ui_ScreenAdmin != NULL ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -1022,7 +1038,7 @@ void checkWiFi() {
 #ifdef DEBUG
         Serial.println("[checkWiFi] Connecting WebSocket");
 #endif
-        
+
         config_wspath = "/partytap/api/v1/ws/";
         config_wspath += tapConfig.getDeviceID();
         webSocket.disconnect();
