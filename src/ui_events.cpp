@@ -31,36 +31,33 @@ void ButtonPinNumberClicked(lv_event_t * e)
 
 void ButtonPinCancelClicked(lv_event_t * e)
 {
+#ifdef DEBUG
+	Serial.println("[ButtonPinCancelClicked]");
+#endif
 	// Your code here
 	if ( entered_pin.length() == 0 ) {
 		ui_ScreenAbout_screen_init();
 		configureSwitches();
-		lv_disp_load_scr(ui_ScreenAbout);		
-		lv_obj_del(ui_ScreenPin);
+		lv_disp_load_scr(ui_ScreenAbout);
+		if ( ui_ScreenPin != NULL ) {		
+			lv_obj_del(ui_ScreenPin);
+		}
 		ui_ScreenPin = NULL;
+	} else {
+		lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 	}
 	entered_pin = "";
-	lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
 }
 
 void ButtonPinOKClicked(lv_event_t * e)
 {
-	char servo_text[10];
 	// if the config PIN is entered, go to config
 	if ( strcmp(entered_pin.c_str(),tapConfig.getPIN()) == 0 ) {
 		entered_pin = "";  
-		ui_ScreenConfig_screen_init();
-    	lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
-    	lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
-    	lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
-    	lv_textarea_set_text(ui_TextAreaConfigDeviceID,tapConfig.getDeviceID());
-    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoClose());
-    	lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
-    	snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoOpen());
-    	lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
-    	lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
-    	lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
-  		lv_disp_load_scr(ui_ScreenConfig);	
+		ui_ScreenAdmin_screen_init();
+		lv_label_set_text_fmt(ui_LabelAdminServerVersion,"Server version: %s",productConfig.getServerVersion());
+		lv_label_set_text_fmt(ui_LabelAdminBranding,"Server Branding: %s",productConfig.getServerBranding());
+		lv_disp_load_scr(ui_ScreenAdmin);
 		lv_obj_del(ui_ScreenPin);
   		ui_ScreenPin = NULL;
 		return;
@@ -112,11 +109,11 @@ void ButtonConfigDoneClicked(lv_event_t * e)
     	tapConfig.setControlMode(CONTROL_MODE_RELAY_TIME);
   	} else if ( strncasecmp(buf,"I2C Servo, Time",15) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TIME);
-  	} else if ( strncasecmp(buf,"I2C_Relay, Time",15) == 0 ) {
+  	} else if ( strncasecmp(buf,"I2C Relay, Time",15) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TIME);
   	} else if ( strncasecmp(buf,"I2C Servo, Ticks",16) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_SERVO_TICKS);
-  	} else if ( strncasecmp(buf,"I2C_Relay, Ticks",16) == 0 ) {
+  	} else if ( strncasecmp(buf,"I2C Relay, Ticks",16) == 0 ) {
     	tapConfig.setControlMode(CONTROL_MODE_I2C_RELAY_TICKS);
   	} else {
     	tapConfig.setControlMode(CONTROL_MODE_NONE);
@@ -144,7 +141,7 @@ void ButtonConfigDoneClicked(lv_event_t * e)
 	
 	tapConfig.save();
 
-	lv_obj_del(ui_ScreenConfig);
+	//lv_obj_del(ui_ScreenConfig);
 
 	restartTap();
 }
@@ -192,13 +189,13 @@ void ButtonCancelPINClicked(lv_event_t * e)
 	lv_obj_add_flag(ui_PanelConfigPIN,LV_OBJ_FLAG_HIDDEN);
 }
 
-void ButtonConfigCloseClicked(lv_event_t * e)
+void ButtonConfigServoCloseClicked(lv_event_t * e)
 {
 	int32_t servoClosed = atoi(lv_textarea_get_text(ui_TextAreaConfigServoClosed));
 	tapClose(servoClosed);
 }
 
-void ButtonConfigOpenClicked(lv_event_t * e)
+void ButtonConfigServoOpenClicked(lv_event_t * e)
 {
 	int32_t servoOpen = atoi(lv_textarea_get_text(ui_TextAreaConfigServoOpen));
 	tapOpen(servoOpen);
@@ -206,10 +203,12 @@ void ButtonConfigOpenClicked(lv_event_t * e)
 
 void ButtonConfigCancelClicked(lv_event_t * e)
 {
-	ui_ScreenAbout_screen_init();
-	configureSwitches();	
-	lv_disp_load_scr(ui_ScreenAbout);
+	ui_ScreenAdmin_screen_init();
+	lv_label_set_text_fmt(ui_LabelAdminServerVersion,"Server version: %s",productConfig.getServerVersion());
+	lv_label_set_text_fmt(ui_LabelAdminBranding,"Server Branding: %s",productConfig.getServerBranding());
+	lv_disp_load_scr(ui_ScreenAdmin);
 	lv_obj_del(ui_ScreenConfig);
+	ui_ScreenConfig = NULL;
 }
 
 void ButtonConfigUpdateClicked(lv_event_t * e)
@@ -224,6 +223,7 @@ void ButtonConfigUpdateClicked(lv_event_t * e)
     lv_obj_add_flag(ui_LabelAboutStatus,LV_OBJ_FLAG_HIDDEN);	
     lv_disp_load_scr(ui_ScreenAbout);	  	
 	lv_obj_del(ui_ScreenConfig);
+	ui_ScreenConfig = NULL;
 	startFirmwareUpdate();
 }
 
@@ -244,16 +244,31 @@ void ButtonBierStartClicked(lv_event_t *e )
 
 void ButtonAboutOneClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(0);
 }
 
 void ButtonAboutTwoClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(1);
 }
 
 void ButtonAboutThreeClicked(lv_event_t *e) 
 {
+	// hide all buttons to avoid too much clicks
+    lv_obj_add_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
+
 	wantBierClicked(2);
 }
 
@@ -261,6 +276,9 @@ void ButtonMainBackClicked(lv_event_t *e) {
 #ifdef DEBUG
 	Serial.println("[ButtonMainBackClicked]");
 #endif
+    lv_obj_add_flag(ui_ButtonMainAbout,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
 	expireInvoice();
 	ui_ScreenAbout_screen_init();
     lv_obj_add_flag(ui_PanelAboutMessage,LV_OBJ_FLAG_HIDDEN);
@@ -274,6 +292,9 @@ void ButtonMainEnterPINClicked(lv_event_t *e) {
 #ifdef DEBUG
 	Serial.println("[ButtonMainEnterPINClicked]");
 #endif
+    lv_obj_add_flag(ui_ButtonMainAbout,LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ButtonMainEnterPIN,LV_OBJ_FLAG_HIDDEN);
+
     entered_pin = "";
 	ui_ScreenPin_screen_init();
     lv_label_set_text(ui_LabelPINValue,"ENTER PIN");
@@ -300,4 +321,69 @@ void PanelAboutHeaderClicked(lv_event_t *e) {
 	ui_ScreenAbout = NULL;
 }
 
+// navigate from admin screen to config screen
+void ButtonAdminConfigClicked(lv_event_t *e) {
+#ifdef DEBUG
+	Serial.println("[ButtonAdminConfigClicked]");
+#endif	
+	char servo_text[10];
+	ui_ScreenConfig_screen_init();
+    lv_textarea_set_text(ui_TextAreaConfigSSID,tapConfig.getWiFiSSID());
+    lv_textarea_set_text(ui_TextAreaConfigWifiPassword,tapConfig.getWiFiPWD());
+    lv_textarea_set_text(ui_TextAreaConfigLNbitsHost,tapConfig.getLNbitsHost());
+    lv_textarea_set_text(ui_TextAreaConfigDeviceID,tapConfig.getDeviceID());
+    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoClose());
+    lv_textarea_set_text(ui_TextAreaConfigServoClosed,servo_text);
+    snprintf_P(servo_text, sizeof(servo_text), PSTR("%d"), tapConfig.getServoOpen());
+    lv_textarea_set_text(ui_TextAreaConfigServoOpen,servo_text);
+    lv_dropdown_set_selected(ui_DropdownConfigPaymentMode,tapConfig.getPaymentMode());
+    lv_dropdown_set_selected(ui_DropdownConfigControlMode,tapConfig.getControlMode());
+  	lv_disp_load_scr(ui_ScreenConfig);	
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
+
+// Navigate from Admin Screen to About screen
+void ButtonAdminCancelClicked(lv_event_t *e) {
+#ifdef DEBUG
+	Serial.println("[ButtonAdminCancelClicked]");
+#endif	
+	ui_ScreenAbout_screen_init();
+	configureSwitches();	
+	lv_disp_load_scr(ui_ScreenAbout);
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
+
+// Tap Open Click on Admin screen
+void ButtonAdminOpenClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminOpenClicked]");
+#endif
+	tapStart();
+}
+
+// Tap Close Click on Admin screen
+void ButtonAdminCloseClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminCloseClicked]");
+#endif
+	tapStop();
+}
+
+// Free Clicked on Admin screen
+void ButtonAdminFreeClicked(lv_event_t *)
+{
+#ifdef DEBUG
+	Serial.println("[ButtonAdminFreeClicked]");
+#endif
+	freeTap = true;
+	ui_ScreenAbout_screen_init();
+	configureSwitches();	
+	lv_disp_load_scr(ui_ScreenAbout);
+	lv_obj_del(ui_ScreenAdmin);
+	ui_ScreenAdmin = NULL;
+}
 

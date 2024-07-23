@@ -1,5 +1,5 @@
 #ifndef PRODUCTCONFIG_H
-#define PRODUCTONFIG_H
+#define PRODUCTCONFIG_H
 
 #include <ArduinoJson.h>
 #include <tapproduct.h>

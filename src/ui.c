@@ -1,5 +1,11 @@
 #include "ui.h"
 #include "ui_helpers.h"
+#include <stdio.h>
+
+#define STR1(x)  #x
+#define STR(x)  STR1(x)    
+
+#define BUTTON_ANIMATE_TIME 400
 
 ///////////////////// VARIABLES ////////////////////
 lv_obj_t * ui_ScreenAbout;
@@ -7,12 +13,6 @@ lv_obj_t * ui_PanelAboutHeader;
 lv_obj_t * ui_LabelAboutHeader;
 lv_obj_t * ui_ImageAbout;
 lv_obj_t * ui_LabelAboutStatus;
-lv_obj_t * ui_ButtonAboutOne;
-lv_obj_t * ui_ButtonAboutTwo;
-lv_obj_t * ui_ButtonAboutThree;
-lv_obj_t * ui_LabelAboutOne;
-lv_obj_t * ui_LabelAboutTwo;
-lv_obj_t * ui_LabelAboutThree;
 lv_obj_t * ui_PanelAboutMessage;
 lv_obj_t * ui_LabelAboutMessage;
 void ui_event_PanelAboutHeader(lv_event_t * e);
@@ -148,8 +148,48 @@ lv_obj_t * ui_Image3;
 lv_obj_t * ui_LabelInstructions;
 lv_obj_t * ui_BarBierProgress;
 lv_obj_t * ui_ButtonBierStart;
-lv_obj_t * ui_Label45;
+lv_obj_t * ui_LabelBierStart;
 void ui_event_ButtonBierStart(lv_event_t * e);
+
+// Admin screen
+lv_obj_t * ui_ScreenAdmin;
+lv_obj_t * ui_PanelAdminHeader;
+lv_obj_t * ui_LabelAdminHeader;
+lv_obj_t * ui_LabelAdminVersion;
+lv_obj_t * ui_LabelAdminServerVersion;
+lv_obj_t * ui_LabelAdminBranding;
+lv_obj_t * ui_LabelAdminWiFiStatus;
+lv_obj_t * ui_LabelAdminWebSocketStatus;
+lv_obj_t * ui_ButtonAdminConfig;
+lv_obj_t * ui_LabelAdminConfig;
+lv_obj_t * ui_ButtonAdminCancel;
+lv_obj_t * ui_LabelAdminCancel;
+lv_obj_t * ui_ButtonAdminFree;
+lv_obj_t * ui_LabelAdminFree;
+lv_obj_t * ui_ButtonAdminOpen;
+lv_obj_t * ui_LabelAdminOpen;
+lv_obj_t * ui_ButtonAdminClose;
+lv_obj_t * ui_LabelAdminClose;
+void ui_event_ButtonAdminConfig(lv_event_t * e);
+void ui_event_ButtonAdminCancel(lv_event_t * e);
+void ui_event_ButtonAdminFree(lv_event_t * e);
+void ui_event_ButtonAdminClose(lv_event_t * e);
+void ui_event_ButtonAdminOpen(lv_event_t * e);
+
+// About screen
+lv_obj_t * ui_ButtonAboutOne;
+lv_obj_t * ui_ButtonAboutTwo;
+lv_obj_t * ui_ButtonAboutThree;
+lv_obj_t * ui_LabelAboutOne;
+lv_obj_t * ui_LabelAboutTwo;
+lv_obj_t * ui_LabelAboutThree;
+lv_anim_t ui_AnimateAboutOne;
+lv_anim_t ui_AnimateAboutTwo;
+lv_anim_t ui_AnimateAboutThree;
+
+// Tap screen
+lv_anim_t ui_AnimateBierStart;
+
 
 ///////////////////// TEST LVGL SETTINGS ////////////////////
 #if LV_COLOR_DEPTH != 16
@@ -424,11 +464,27 @@ void ui_event_KeyboardConfig(lv_event_t * e)
 void ui_event_ButtonConfigBack(lv_event_t * e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_CLICKED) {
         _ui_screen_change(ui_ScreenConfig, LV_SCR_LOAD_ANIM_NONE, 0, 0);
     }
 }
+
+void ui_event_ButtonConfigServoClose(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonConfigServoCloseClicked(e);
+    }
+}
+
+void ui_event_ButtonConfigServoOpen(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonConfigServoOpenClicked(e);
+    }
+}
+
 
 void ui_event_ScreenBierFlowing(lv_event_t * e)
 {
@@ -442,11 +498,58 @@ void ui_event_ScreenBierFlowing(lv_event_t * e)
 void ui_event_ButtonBierStart(lv_event_t *e)
 {
     lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t * target = lv_event_get_target(e);
     if(event_code == LV_EVENT_CLICKED) {
         ButtonBierStartClicked(e);
     }
 }
+
+/// Admin Screen events
+void ui_event_ButtonAdminConfig(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonAdminConfigClicked(e);
+    }
+}
+
+void ui_event_ButtonAdminCancel(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonAdminCancelClicked(e);
+    }
+}
+
+void ui_event_ButtonAdminOpen(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonAdminOpenClicked(e);
+    }
+}
+
+void ui_event_ButtonAdminClose(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonAdminCloseClicked(e);
+    }
+}
+
+void ui_event_ButtonAdminFree(lv_event_t *e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if(event_code == LV_EVENT_CLICKED) {
+        ButtonAdminFreeClicked(e);
+    }
+}
+
+// Generic callbacks
+static void ui_AnimateButtonCallback(void *var, int32_t v)
+{
+    lv_obj_set_size((lv_obj_t *)var, v, v);
+}
+
 
 ///////////////////// SCREENS ////////////////////
 void ui_ScreenAbout_screen_init(void)
@@ -488,6 +591,12 @@ void ui_ScreenAbout_screen_init(void)
 #ifdef BRANDING_BEER
     lv_img_set_src(ui_ImageAbout, &ui_img_kanhetal256);  // Kan het Al
 #endif
+#ifdef BRANDING_VJZGBT
+    lv_img_set_src(ui_ImageAbout, &ui_img_4jz_grauburgunder_trocken); // Vier Jahreszeiten, Grauburgunder Trocken
+#endif
+#ifdef BRANDING_BONANZA
+    lv_img_set_src(ui_ImageAbout, &ui_img_meetup_bonanza_256); // Vier Jahreszeiten, Grauburgunder Trocken
+#endif
 
     lv_obj_set_width(ui_ImageAbout, LV_SIZE_CONTENT);   /// 256
     lv_obj_set_height(ui_ImageAbout, LV_SIZE_CONTENT);    /// 256
@@ -528,6 +637,17 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelAboutOne, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutOne, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    lv_anim_init(&ui_AnimateAboutOne);
+    lv_anim_set_var(&ui_AnimateAboutOne, ui_ButtonAboutOne);
+    lv_anim_set_values(&ui_AnimateAboutOne,90,95);
+    lv_anim_set_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
+    lv_anim_set_playback_delay(&ui_AnimateAboutOne,0);
+    lv_anim_set_playback_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
+    lv_anim_set_repeat_delay(&ui_AnimateAboutOne,0);
+    lv_anim_set_repeat_count(&ui_AnimateAboutOne, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_exec_cb(&ui_AnimateAboutOne, ui_AnimateButtonCallback);
+
+
     ui_ButtonAboutTwo = lv_btn_create(ui_ScreenAbout);
     lv_obj_set_width(ui_ButtonAboutTwo, 100);
     lv_obj_set_height(ui_ButtonAboutTwo, 100);
@@ -549,6 +669,16 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelAboutTwo, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutTwo, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    lv_anim_init(&ui_AnimateAboutTwo);
+    lv_anim_set_var(&ui_AnimateAboutTwo, ui_ButtonAboutTwo);
+    lv_anim_set_values(&ui_AnimateAboutTwo,90,95);
+    lv_anim_set_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
+    lv_anim_set_playback_delay(&ui_AnimateAboutTwo,0);
+    lv_anim_set_playback_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
+    lv_anim_set_repeat_delay(&ui_AnimateAboutTwo,0);
+    lv_anim_set_repeat_count(&ui_AnimateAboutTwo, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_exec_cb(&ui_AnimateAboutTwo, ui_AnimateButtonCallback);
+
     ui_ButtonAboutThree = lv_btn_create(ui_ScreenAbout);
     lv_obj_set_width(ui_ButtonAboutThree, 100);
     lv_obj_set_height(ui_ButtonAboutThree, 100);
@@ -569,6 +699,16 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_color(ui_LabelAboutThree, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelAboutThree, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutThree, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_anim_init(&ui_AnimateAboutThree);
+    lv_anim_set_var(&ui_AnimateAboutThree, ui_ButtonAboutThree);
+    lv_anim_set_values(&ui_AnimateAboutThree,90,95);
+    lv_anim_set_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
+    lv_anim_set_playback_delay(&ui_AnimateAboutThree,0);
+    lv_anim_set_playback_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
+    lv_anim_set_repeat_delay(&ui_AnimateAboutThree,0);
+    lv_anim_set_repeat_count(&ui_AnimateAboutThree, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_exec_cb(&ui_AnimateAboutThree, ui_AnimateButtonCallback);
 
 
     ui_PanelAboutMessage = lv_obj_create(ui_ScreenAbout);
@@ -1038,7 +1178,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_y(ui_TextAreaConfigWifiPassword, 50);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigWifiPassword, "Wi-Fi password");
     lv_textarea_set_one_line(ui_TextAreaConfigWifiPassword, true);
-    lv_textarea_set_password_mode(ui_TextAreaConfigWifiPassword, true);
+    //lv_textarea_set_password_mode(ui_TextAreaConfigWifiPassword, true);
 
     ui_LabelConfigLNbitsHost = lv_label_create(ui_ScreenConfig);
     lv_obj_set_width(ui_LabelConfigLNbitsHost, LV_SIZE_CONTENT);   /// 1
@@ -1089,18 +1229,18 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelConfigServo, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_TextAreaConfigServoClosed = lv_textarea_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_TextAreaConfigServoClosed, 100);
+    lv_obj_set_width(ui_TextAreaConfigServoClosed, 95);
     lv_obj_set_height(ui_TextAreaConfigServoClosed, LV_SIZE_CONTENT);    /// 70
-    lv_obj_set_x(ui_TextAreaConfigServoClosed, -10);
+    lv_obj_set_x(ui_TextAreaConfigServoClosed, 0);
     lv_obj_set_y(ui_TextAreaConfigServoClosed, 185);
-    lv_obj_set_align(ui_TextAreaConfigServoClosed, LV_ALIGN_TOP_RIGHT);
+    lv_obj_set_align(ui_TextAreaConfigServoClosed, LV_ALIGN_TOP_MID);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigServoClosed, "--");
     lv_textarea_set_one_line(ui_TextAreaConfigServoClosed, true);
 
     ui_TextAreaConfigServoOpen = lv_textarea_create(ui_ScreenConfig);
-    lv_obj_set_width(ui_TextAreaConfigServoOpen, 100);
+    lv_obj_set_width(ui_TextAreaConfigServoOpen, 95);
     lv_obj_set_height(ui_TextAreaConfigServoOpen, LV_SIZE_CONTENT);    /// 70
-    lv_obj_set_x(ui_TextAreaConfigServoOpen, -120);
+    lv_obj_set_x(ui_TextAreaConfigServoOpen, -10);
     lv_obj_set_y(ui_TextAreaConfigServoOpen, 185);
     lv_obj_set_align(ui_TextAreaConfigServoOpen, LV_ALIGN_TOP_RIGHT);
     lv_textarea_set_placeholder_text(ui_TextAreaConfigServoOpen, "--");
@@ -1320,7 +1460,7 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_set_width(ui_LabelConfigDone, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelConfigDone, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_LabelConfigDone, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_LabelConfigDone, "DONE");
+    lv_label_set_text(ui_LabelConfigDone, "RESTART");
     lv_obj_set_style_text_color(ui_LabelConfigDone, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelConfigDone, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelConfigDone, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -1498,6 +1638,8 @@ void ui_ScreenConfig_screen_init(void)
     lv_obj_add_event_cb(ui_KeyboardConfig, ui_event_KeyboardConfig, LV_EVENT_ALL, NULL);
 
     lv_obj_add_event_cb(ui_ButtonPIN, ui_event_ButtonPIN, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonConfigServoClose, ui_event_ButtonConfigServoClose, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonConfigServoOpen, ui_event_ButtonConfigServoOpen, LV_EVENT_ALL, NULL);
 
     lv_obj_add_event_cb(ui_ButtonConfigDone, ui_event_ButtonConfigDone, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_ButtonConfigCancel, ui_event_ButtonConfigCancel, LV_EVENT_ALL, NULL);
@@ -1540,8 +1682,8 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_set_style_text_font(ui_LabelInstructions, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ButtonBierStart = lv_btn_create(ui_ScreenBierFlowing);
-    lv_obj_set_width(ui_ButtonBierStart, 160);
-    lv_obj_set_height(ui_ButtonBierStart, 50);
+    lv_obj_set_width(ui_ButtonBierStart, 90);
+    lv_obj_set_height(ui_ButtonBierStart,90);
     lv_obj_set_x(ui_ButtonBierStart, 0);
     lv_obj_set_y(ui_ButtonBierStart, -50);
     lv_obj_set_align(ui_ButtonBierStart, LV_ALIGN_BOTTOM_MID);
@@ -1550,14 +1692,24 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_set_style_bg_color(ui_ButtonBierStart, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_ButtonBierStart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_Label45 = lv_label_create(ui_ButtonBierStart);
-    lv_obj_set_width(ui_Label45, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label45, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_align(ui_Label45, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_Label45, "TAP");
-    lv_obj_set_style_text_color(ui_Label45, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui_Label45, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_Label45, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+    ui_LabelBierStart = lv_label_create(ui_ButtonBierStart);
+    lv_obj_set_width(ui_LabelBierStart, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelBierStart, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelBierStart, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelBierStart, "TAP");
+    lv_obj_set_style_text_color(ui_LabelBierStart, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelBierStart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelBierStart, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_anim_init(&ui_AnimateBierStart);
+    lv_anim_set_var(&ui_AnimateBierStart, ui_ButtonBierStart);
+    lv_anim_set_values(&ui_AnimateBierStart,90,95);
+    lv_anim_set_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
+    lv_anim_set_playback_delay(&ui_AnimateBierStart,0);
+    lv_anim_set_playback_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
+    lv_anim_set_repeat_delay(&ui_AnimateBierStart,0);
+    lv_anim_set_repeat_count(&ui_AnimateBierStart, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_exec_cb(&ui_AnimateBierStart, ui_AnimateButtonCallback);
 
     ui_BarBierProgress = lv_bar_create(ui_ScreenBierFlowing);
     lv_bar_set_range(ui_BarBierProgress,0,TAPPROGRESS_STEPS);
@@ -1581,6 +1733,193 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_add_event_cb(ui_ScreenBierFlowing, ui_event_ScreenBierFlowing, LV_EVENT_ALL, NULL);
 
 }
+
+void ui_ScreenAdmin_screen_init(void)
+{
+    ui_ScreenAdmin = lv_obj_create(NULL);
+    lv_obj_clear_flag(ui_ScreenAdmin, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ScreenAdmin, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ScreenAdmin, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_PanelAdminHeader = lv_obj_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_PanelAdminHeader, 320);
+    lv_obj_set_height(ui_PanelAdminHeader, 50);
+    lv_obj_clear_flag(ui_PanelAdminHeader, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(ui_PanelAdminHeader, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_PanelAdminHeader, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_PanelAdminHeader, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_PanelAdminHeader, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminHeader = lv_label_create(ui_PanelAdminHeader);
+    lv_obj_set_width(ui_LabelAdminHeader, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminHeader, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminHeader, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminHeader, "Administration");
+    lv_obj_set_style_text_color(ui_LabelAdminHeader, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminHeader, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminHeader, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminVersion = lv_label_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_LabelAdminVersion, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminVersion, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelAdminVersion, 10);
+    lv_obj_set_y(ui_LabelAdminVersion, 70);
+    lv_label_set_text_fmt(ui_LabelAdminVersion, "Firmware version: %s",STR(FIRMWARE_VERSION));
+    lv_obj_set_style_text_color(ui_LabelAdminVersion, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminVersion, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminVersion, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminServerVersion = lv_label_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_LabelAdminServerVersion, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminServerVersion, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelAdminServerVersion, 10);
+    lv_obj_set_y(ui_LabelAdminServerVersion, 100);
+    lv_label_set_text(ui_LabelAdminServerVersion, "");
+    lv_obj_set_style_text_color(ui_LabelAdminServerVersion, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminServerVersion, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminServerVersion, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminBranding = lv_label_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_LabelAdminBranding, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminBranding, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelAdminBranding, 10);
+    lv_obj_set_y(ui_LabelAdminBranding, 130);
+    lv_label_set_text(ui_LabelAdminBranding, "");
+    lv_obj_set_style_text_color(ui_LabelAdminBranding, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminBranding, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminBranding, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminWiFiStatus = lv_label_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_LabelAdminWiFiStatus, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminWiFiStatus, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelAdminWiFiStatus, 10);
+    lv_obj_set_y(ui_LabelAdminWiFiStatus, 160);
+    lv_label_set_text(ui_LabelAdminWiFiStatus, "WiFi Status: ");
+    lv_obj_set_style_text_color(ui_LabelAdminWiFiStatus, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminWiFiStatus, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminWiFiStatus, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminWebSocketStatus = lv_label_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_LabelAdminWebSocketStatus, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminWebSocketStatus, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelAdminWebSocketStatus, 10);
+    lv_obj_set_y(ui_LabelAdminWebSocketStatus, 190);
+    lv_label_set_text(ui_LabelAdminWebSocketStatus, "WebSocket Status: ");
+    lv_obj_set_style_text_color(ui_LabelAdminWebSocketStatus, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminWebSocketStatus, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminWebSocketStatus, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
+    ui_ButtonAdminOpen = lv_btn_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_ButtonAdminOpen, 145);
+    lv_obj_set_height(ui_ButtonAdminOpen, 70);
+    lv_obj_set_x(ui_ButtonAdminOpen, 10);
+    lv_obj_set_y(ui_ButtonAdminOpen, 220);
+    lv_obj_set_align(ui_ButtonAdminOpen, LV_ALIGN_TOP_LEFT);
+    lv_obj_add_flag(ui_ButtonAdminOpen, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonAdminOpen, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonAdminOpen, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonAdminOpen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminOpen = lv_label_create(ui_ButtonAdminOpen);
+    lv_obj_set_width(ui_LabelAdminOpen, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminOpen, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminOpen, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminOpen, "OPEN");
+    lv_obj_set_style_text_color(ui_LabelAdminOpen, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminOpen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminOpen, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_ButtonAdminClose = lv_btn_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_ButtonAdminClose, 145);
+    lv_obj_set_height(ui_ButtonAdminClose, 70);
+    lv_obj_set_x(ui_ButtonAdminClose, -10);
+    lv_obj_set_y(ui_ButtonAdminClose, 220);
+    lv_obj_set_align(ui_ButtonAdminClose, LV_ALIGN_TOP_RIGHT);
+    lv_obj_add_flag(ui_ButtonAdminClose, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonAdminClose, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonAdminClose, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonAdminClose, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminClose = lv_label_create(ui_ButtonAdminClose);
+    lv_obj_set_width(ui_LabelAdminClose, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminClose, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminClose, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminClose, "CLOSE");
+    lv_obj_set_style_text_color(ui_LabelAdminClose, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminClose, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminClose, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_ButtonAdminFree = lv_btn_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_ButtonAdminFree, 300);
+    lv_obj_set_height(ui_ButtonAdminFree, 70);
+    lv_obj_set_x(ui_ButtonAdminFree, 10);
+    lv_obj_set_y(ui_ButtonAdminFree, 300);
+    lv_obj_set_align(ui_ButtonAdminFree, LV_ALIGN_TOP_LEFT);
+    lv_obj_add_flag(ui_ButtonAdminFree, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonAdminFree, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonAdminFree, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonAdminFree, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminFree = lv_label_create(ui_ButtonAdminFree);
+    lv_obj_set_width(ui_LabelAdminFree, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminFree, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminFree, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminFree, "FREE");
+    lv_obj_set_style_text_color(ui_LabelAdminFree, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminFree, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminFree, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
+    ui_ButtonAdminConfig = lv_btn_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_ButtonAdminConfig, 100);
+    lv_obj_set_height(ui_ButtonAdminConfig, 50);
+    lv_obj_set_x(ui_ButtonAdminConfig, 10);
+    lv_obj_set_y(ui_ButtonAdminConfig, -10);
+    lv_obj_set_align(ui_ButtonAdminConfig, LV_ALIGN_BOTTOM_LEFT);
+    lv_obj_add_flag(ui_ButtonAdminConfig, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonAdminConfig, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonAdminConfig, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonAdminConfig, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminConfig = lv_label_create(ui_ButtonAdminConfig);
+    lv_obj_set_width(ui_LabelAdminConfig, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminConfig, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminConfig, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminConfig, "CONFIG");
+    lv_obj_set_style_text_color(ui_LabelAdminConfig, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminConfig, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminConfig, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
+    ui_ButtonAdminCancel = lv_btn_create(ui_ScreenAdmin);
+    lv_obj_set_width(ui_ButtonAdminCancel, 100);
+    lv_obj_set_height(ui_ButtonAdminCancel, 50);
+    lv_obj_set_x(ui_ButtonAdminCancel, -10);
+    lv_obj_set_y(ui_ButtonAdminCancel, -10);
+    lv_obj_set_align(ui_ButtonAdminCancel, LV_ALIGN_BOTTOM_RIGHT);
+    lv_obj_add_flag(ui_ButtonAdminCancel, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonAdminCancel, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonAdminCancel, lv_color_hex(BB_BGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonAdminCancel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelAdminCancel = lv_label_create(ui_ButtonAdminCancel);
+    lv_obj_set_width(ui_LabelAdminCancel, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelAdminCancel, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_LabelAdminCancel, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelAdminCancel, "DONE");
+    lv_obj_set_style_text_color(ui_LabelAdminCancel, lv_color_hex(BB_FGCOLOR), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelAdminCancel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelAdminCancel, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
+    lv_obj_add_event_cb(ui_ButtonAdminConfig, ui_event_ButtonAdminConfig, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonAdminCancel, ui_event_ButtonAdminCancel, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonAdminOpen, ui_event_ButtonAdminOpen, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonAdminClose, ui_event_ButtonAdminClose, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_ButtonAdminFree, ui_event_ButtonAdminFree, LV_EVENT_ALL, NULL);
+}
+
 
 void ui_init(void)
 {
