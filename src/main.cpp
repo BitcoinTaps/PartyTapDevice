@@ -79,8 +79,33 @@ Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &doFirmwareUpdate);
 Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 Task checkInvoiceReceivedTask(TASK_IMMEDIATE, TASK_ONCE, &checkInvoiceReceived);
 
+#ifdef TEST
+void executeTest();
+Task testTask(1 * TASK_MINUTE, TASK_FOREVER, &executeTest);
+#endif
 
+#ifdef TEST
+void executeTest() {
+  static bool open = false;
 
+  if ( open == false ) {
+    Serial.println("[executeTest] tapStart");
+    tapStart();
+    open = true;
+    if ( random(100) < 10 ) {
+      Serial.println("[executeTest] restarting");
+      delay(1000);
+      ESP.restart();
+    }
+
+  } else {  
+    Serial.println("[executeTest] tapStop");
+    tapStop();
+    open = false;
+  }
+
+}
+#endif
 
 void setPanelMainMessage(const char *s,int timeout)  {
 #ifdef DEBUG
@@ -353,6 +378,9 @@ void tapStart() {
 }
 
 void tapStop() {
+#ifdef DEBUG
+  Serial.println("[tapStop]");
+#endif
   tapClose(tapConfig.getServoClose());
 }
 
@@ -922,6 +950,9 @@ void setup()
   taskScheduler.addTask(fromBeerToAboutPageTask);
   taskScheduler.addTask(beerTapProgressTask);
   taskScheduler.addTask(checkInvoiceReceivedTask);
+#ifdef TEST
+  taskScheduler.addTask(testTask);
+#endif
 
   // init filesystem and load config
   LittleFS.begin(true);
@@ -960,12 +991,14 @@ void setup()
       sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
       sensact->initI2CServo(TAP_I2C_SERVO_PIN);
       sensact->initNFC();
+      delay(1000);
       break;
     case CONTROL_MODE_I2C_RELAY_TIME:
       sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
       sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
       sensact->initI2CRelay(TAP_I2C_RELAY_PIN);
       sensact->initNFC();
+      delay(1000);
       break;
     default:
       break;
@@ -979,7 +1012,6 @@ void setup()
 #endif    
     configureSwitches();
   }
-  
 
   
   webSocket.onEvent(webSocketEvent);
@@ -990,6 +1022,10 @@ void setup()
   checkWiFiTask.restartDelayed(1000);
 
   WiFi.begin(tapConfig.getWiFiSSID(),tapConfig.getWiFiPWD());
+
+#ifdef TEST
+  testTask.restartDelayed(5000);
+#endif
 
 }
 
@@ -1099,7 +1135,7 @@ void checkWiFi() {
       break;
     default:
 #ifdef DEBUG
-      Serial.printf("[checkWiFi] Unknown WiFi state %d\n",status);
+      Serial.printf("[checkWiFi] Unknown WiFi state %d\n",wifiStatus);
 #endif
       break;
     }
