@@ -183,12 +183,12 @@ lv_obj_t * ui_ButtonAboutThree;
 lv_obj_t * ui_LabelAboutOne;
 lv_obj_t * ui_LabelAboutTwo;
 lv_obj_t * ui_LabelAboutThree;
-lv_anim_t ui_AnimateAboutOne;
-lv_anim_t ui_AnimateAboutTwo;
-lv_anim_t ui_AnimateAboutThree;
+// lv_anim_t ui_AnimateAboutOne;
+// lv_anim_t ui_AnimateAboutTwo;
+// lv_anim_t ui_AnimateAboutThree;
 
 // Tap screen
-lv_anim_t ui_AnimateBierStart;
+//lv_anim_t ui_AnimateBierStart;
 
 
 ///////////////////// TEST LVGL SETTINGS ////////////////////
@@ -544,11 +544,11 @@ void ui_event_ButtonAdminFree(lv_event_t *e)
     }
 }
 
-// Generic callbacks
-static void ui_AnimateButtonCallback(void *var, int32_t v)
-{
-    lv_obj_set_size((lv_obj_t *)var, v, v);
-}
+// // Generic callbacks
+// static void ui_AnimateButtonCallback(void *var, int32_t v)
+// {
+//     lv_obj_set_size((lv_obj_t *)var, v, v);
+// }
 
 
 ///////////////////// SCREENS ////////////////////
@@ -637,15 +637,15 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelAboutOne, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutOne, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_anim_init(&ui_AnimateAboutOne);
-    lv_anim_set_var(&ui_AnimateAboutOne, ui_ButtonAboutOne);
-    lv_anim_set_values(&ui_AnimateAboutOne,90,95);
-    lv_anim_set_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
-    lv_anim_set_playback_delay(&ui_AnimateAboutOne,0);
-    lv_anim_set_playback_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
-    lv_anim_set_repeat_delay(&ui_AnimateAboutOne,0);
-    lv_anim_set_repeat_count(&ui_AnimateAboutOne, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_exec_cb(&ui_AnimateAboutOne, ui_AnimateButtonCallback);
+    // lv_anim_init(&ui_AnimateAboutOne);
+    // lv_anim_set_var(&ui_AnimateAboutOne, ui_ButtonAboutOne);
+    // lv_anim_set_values(&ui_AnimateAboutOne,90,95);
+    // lv_anim_set_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_playback_delay(&ui_AnimateAboutOne,0);
+    // lv_anim_set_playback_time(&ui_AnimateAboutOne,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_repeat_delay(&ui_AnimateAboutOne,0);
+    // lv_anim_set_repeat_count(&ui_AnimateAboutOne, LV_ANIM_REPEAT_INFINITE);
+    // lv_anim_set_exec_cb(&ui_AnimateAboutOne, ui_AnimateButtonCallback);
 
 
     ui_ButtonAboutTwo = lv_btn_create(ui_ScreenAbout);
@@ -669,15 +669,15 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelAboutTwo, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutTwo, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_anim_init(&ui_AnimateAboutTwo);
-    lv_anim_set_var(&ui_AnimateAboutTwo, ui_ButtonAboutTwo);
-    lv_anim_set_values(&ui_AnimateAboutTwo,90,95);
-    lv_anim_set_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
-    lv_anim_set_playback_delay(&ui_AnimateAboutTwo,0);
-    lv_anim_set_playback_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
-    lv_anim_set_repeat_delay(&ui_AnimateAboutTwo,0);
-    lv_anim_set_repeat_count(&ui_AnimateAboutTwo, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_exec_cb(&ui_AnimateAboutTwo, ui_AnimateButtonCallback);
+    // lv_anim_init(&ui_AnimateAboutTwo);
+    // lv_anim_set_var(&ui_AnimateAboutTwo, ui_ButtonAboutTwo);
+    // lv_anim_set_values(&ui_AnimateAboutTwo,90,95);
+    // lv_anim_set_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_playback_delay(&ui_AnimateAboutTwo,0);
+    // lv_anim_set_playback_time(&ui_AnimateAboutTwo,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_repeat_delay(&ui_AnimateAboutTwo,0);
+    // lv_anim_set_repeat_count(&ui_AnimateAboutTwo, LV_ANIM_REPEAT_INFINITE);
+    // lv_anim_set_exec_cb(&ui_AnimateAboutTwo, ui_AnimateButtonCallback);
 
     ui_ButtonAboutThree = lv_btn_create(ui_ScreenAbout);
     lv_obj_set_width(ui_ButtonAboutThree, 100);
@@ -700,15 +700,15 @@ void ui_ScreenAbout_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelAboutThree, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelAboutThree, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_anim_init(&ui_AnimateAboutThree);
-    lv_anim_set_var(&ui_AnimateAboutThree, ui_ButtonAboutThree);
-    lv_anim_set_values(&ui_AnimateAboutThree,90,95);
-    lv_anim_set_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
-    lv_anim_set_playback_delay(&ui_AnimateAboutThree,0);
-    lv_anim_set_playback_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
-    lv_anim_set_repeat_delay(&ui_AnimateAboutThree,0);
-    lv_anim_set_repeat_count(&ui_AnimateAboutThree, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_exec_cb(&ui_AnimateAboutThree, ui_AnimateButtonCallback);
+    // lv_anim_init(&ui_AnimateAboutThree);
+    // lv_anim_set_var(&ui_AnimateAboutThree, ui_ButtonAboutThree);
+    // lv_anim_set_values(&ui_AnimateAboutThree,90,95);
+    // lv_anim_set_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_playback_delay(&ui_AnimateAboutThree,0);
+    // lv_anim_set_playback_time(&ui_AnimateAboutThree,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_repeat_delay(&ui_AnimateAboutThree,0);
+    // lv_anim_set_repeat_count(&ui_AnimateAboutThree, LV_ANIM_REPEAT_INFINITE);
+    // lv_anim_set_exec_cb(&ui_AnimateAboutThree, ui_AnimateButtonCallback);
 
 
     ui_PanelAboutMessage = lv_obj_create(ui_ScreenAbout);
@@ -1701,15 +1701,15 @@ void ui_ScreenBierFlowing_screen_init(void)
     lv_obj_set_style_text_opa(ui_LabelBierStart, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelBierStart, &ui_font_UbuntuBoldItalic, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_anim_init(&ui_AnimateBierStart);
-    lv_anim_set_var(&ui_AnimateBierStart, ui_ButtonBierStart);
-    lv_anim_set_values(&ui_AnimateBierStart,90,95);
-    lv_anim_set_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
-    lv_anim_set_playback_delay(&ui_AnimateBierStart,0);
-    lv_anim_set_playback_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
-    lv_anim_set_repeat_delay(&ui_AnimateBierStart,0);
-    lv_anim_set_repeat_count(&ui_AnimateBierStart, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_exec_cb(&ui_AnimateBierStart, ui_AnimateButtonCallback);
+    // lv_anim_init(&ui_AnimateBierStart);
+    // lv_anim_set_var(&ui_AnimateBierStart, ui_ButtonBierStart);
+    // lv_anim_set_values(&ui_AnimateBierStart,90,95);
+    // lv_anim_set_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_playback_delay(&ui_AnimateBierStart,0);
+    // lv_anim_set_playback_time(&ui_AnimateBierStart,BUTTON_ANIMATE_TIME);
+    // lv_anim_set_repeat_delay(&ui_AnimateBierStart,0);
+    // lv_anim_set_repeat_count(&ui_AnimateBierStart, LV_ANIM_REPEAT_INFINITE);
+    // lv_anim_set_exec_cb(&ui_AnimateBierStart, ui_AnimateButtonCallback);
 
     ui_BarBierProgress = lv_bar_create(ui_ScreenBierFlowing);
     lv_bar_set_range(ui_BarBierProgress,0,TAPPROGRESS_STEPS);

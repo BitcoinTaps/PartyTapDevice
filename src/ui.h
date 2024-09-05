@@ -168,9 +168,9 @@ void ButtonAboutOneClicked(lv_event_t * e);
 void ButtonAboutTwoClicked(lv_event_t * e);
 void ButtonAboutThreeClicked(lv_event_t * e);
 void PanelAboutHeaderClicked(lv_event_t * e);
-extern lv_anim_t ui_AnimateAboutOne;
-extern lv_anim_t ui_AnimateAboutTwo;
-extern lv_anim_t ui_AnimateAboutThree;
+//extern lv_anim_t ui_AnimateAboutOne;
+//extern lv_anim_t ui_AnimateAboutTwo;
+//extern lv_anim_t ui_AnimateAboutThree;
 
 // main screen
 void ui_ScreenMain_screen_init(void);
@@ -182,7 +182,7 @@ void ButtonMainEnterPINClicked(lv_event_t * e);
 void ButtonScreenBierFlowingClicked(lv_event_t * e);
 void ButtonBierStartClicked(lv_event_t * e);
 void ui_ScreenBierFlowing_screen_init(void);
-extern lv_anim_t ui_AnimateBierStart;
+//extern lv_anim_t ui_AnimateBierStart;
 
 #ifdef BRANDING_BITCOINTAPS
 LV_IMG_DECLARE(ui_img_bitcointaps256);    // Bitcoin Taps logo

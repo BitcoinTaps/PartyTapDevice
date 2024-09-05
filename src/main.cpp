@@ -86,23 +86,16 @@ Task testTask(1 * TASK_MINUTE, TASK_FOREVER, &executeTest);
 
 #ifdef TEST
 void executeTest() {
-  static bool open = false;
 
-  if ( open == false ) {
-    Serial.println("[executeTest] tapStart");
-    tapStart();
-    open = true;
-    if ( random(100) < 10 ) {
-      Serial.println("[executeTest] restarting");
-      delay(1000);
-      ESP.restart();
-    }
+  freeTap = true;
+  wantBierClicked(random(0,2));
 
-  } else {  
-    Serial.println("[executeTest] tapStop");
-    tapStop();
-    open = false;
-  }
+
+
+  delay(random(500,20000));
+
+  beerStart();
+
 
 }
 #endif
@@ -423,7 +416,7 @@ void beerStart()
 #ifdef DEBUG
   Serial.println("[beerStart]");
 #endif
-  // the user hascommende to tap the beer, delete the payment_pin for offline payments
+  // the user has commamded to tap the beer, delete the payment_pin for offline payments
   payment_pin = "";
   
   notifyOrderReceived();
@@ -537,7 +530,7 @@ void wantBierClicked(int item) {
       lv_obj_add_flag(ui_BarBierProgress,LV_OBJ_FLAG_HIDDEN);
 		  lv_obj_clear_flag(ui_ButtonBierStart,LV_OBJ_FLAG_HIDDEN);
   	  lv_bar_set_value(ui_BarBierProgress,0,LV_ANIM_OFF);
-      lv_anim_start(&ui_AnimateBierStart);
+      //lv_anim_start(&ui_AnimateBierStart);
 		  lv_disp_load_scr(ui_ScreenBierFlowing);
     }
     if ( ui_ScreenAbout != NULL ) {
@@ -788,7 +781,7 @@ void configureSwitches() {
         lv_obj_add_flag(ui_ButtonAboutTwo,LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ButtonAboutThree,LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ButtonAboutOne,LV_OBJ_FLAG_HIDDEN);
-        lv_anim_start(&ui_AnimateAboutOne);
+        //lv_anim_start(&ui_AnimateAboutOne);
       }
       break;
     case 2:
@@ -801,8 +794,8 @@ void configureSwitches() {
         lv_obj_set_x(ui_ButtonAboutTwo, 60);
         lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
         lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
-        lv_anim_start(&ui_AnimateAboutOne);
-        lv_anim_start(&ui_AnimateAboutTwo);
+        //lv_anim_start(&ui_AnimateAboutOne);
+        //lv_anim_start(&ui_AnimateAboutTwo);
       }
       break;
     case 3:
@@ -817,9 +810,9 @@ void configureSwitches() {
         lv_label_set_text(ui_LabelAboutOne, productConfig.getProduct(0)->getLabel());
         lv_label_set_text(ui_LabelAboutTwo, productConfig.getProduct(1)->getLabel());
         lv_label_set_text(ui_LabelAboutThree, productConfig.getProduct(2)->getLabel());
-        lv_anim_start(&ui_AnimateAboutOne);
-        lv_anim_start(&ui_AnimateAboutTwo);
-        lv_anim_start(&ui_AnimateAboutThree);
+        //lv_anim_start(&ui_AnimateAboutOne);
+        //lv_anim_start(&ui_AnimateAboutTwo);
+        //lv_anim_start(&ui_AnimateAboutThree);
       }
       break;
     default:
@@ -969,7 +962,7 @@ void setup()
   xTaskCreatePinnedToCore (
     loop0,     // Function to implement the task
     "loop0",   // Name of the task
-    20000,      // Stack size in bytes
+    5000,      // Stack size in bytes
     NULL,      // Task input parameter
     10,         // Priority of the task
     NULL,      // Task handle.
@@ -1035,11 +1028,11 @@ void checkNFCPayment() {
 
 bool httpsHostReachable(const char *hostname) {
   static char url[200];
-  snprintf_P(url, sizeof(url), "https://%s/", hostname);
- 
+  snprintf_P(url, sizeof(url), "https://%s/", hostname); 
   HTTPClient http;
   http.begin(url);
   int responseCode = http.GET();
+  http.end();
   if ( responseCode > 0 ) {
     return true;
   }
@@ -1050,6 +1043,11 @@ void checkWiFi() {
   static bool bConnected = false;
   wl_status_t wifiStatus = WiFi.status();
   
+#ifdef DEBUG
+  Serial.printf("[checkWiFi] esp_get_free_heap_size = %d\n",esp_get_free_heap_size()); 
+  Serial.printf("[checkWiFi] esp_get_minimum_free_heap_size = %d\n",esp_get_minimum_free_heap_size()); 
+#endif
+
   if ( ui_ScreenAdmin != NULL ) {
     if ( webSocket.isConnected() ) {
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -1061,7 +1059,6 @@ void checkWiFi() {
         lv_label_set_text(ui_LabelAdminWebSocketStatus,"WebSocket: disconnected");
         const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
     }
-
   }
 
   switch ( wifiStatus ) {
