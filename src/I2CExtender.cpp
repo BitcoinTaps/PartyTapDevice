@@ -9,7 +9,7 @@ I2CExtender::I2CExtender(TwoWire *wire, int address) {
     this->_address = address;   
 }
 
-bool I2CExtender::begin() {    
+bool I2CExtender::begin() {
     this->_wire->beginTransmission(this->_address);
     delay(2);
     int error = this->_wire->endTransmission();

@@ -9,7 +9,7 @@ bool Sensact::initI2C(int sda, int scl, int bus) {
         Serial.println("[Sensact::initI2C]");
 #endif 
     this->_wire = new TwoWire(bus);
-    //this->_wire->setClock(400000);
+    this->_wire->setClock(100000);
 
     if (this->_wire->begin(TAP_I2C_SDA, TAP_I2C_SCL) ) {
 #ifdef DEBUG
