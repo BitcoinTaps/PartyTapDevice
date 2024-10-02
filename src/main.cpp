@@ -1008,8 +1008,8 @@ void setup()
 
   
   webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(3000);
-  webSocket.enableHeartbeat(15000,4000,2);
+//  webSocket.setReconnectInterval(3000);
+//  webSocket.enableHeartbeat(15000,4000,2);
     
 
   checkWiFiTask.restartDelayed(1000);
@@ -1041,6 +1041,15 @@ bool httpsHostReachable(const char *hostname) {
 
 void checkWiFi() {
   static bool bConnected = false;
+
+  // don't do wifi checks when we serve beer
+  if ( ui_ScreenBierFlowing != NULL ) {
+#ifdef DEBUG
+  Serial.println("[checkWiFi] Skipping check on beer flowing screen");
+#endif
+    return;
+  }
+
   wl_status_t wifiStatus = WiFi.status();
   
 #ifdef DEBUG
