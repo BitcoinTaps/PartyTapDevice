@@ -1344,7 +1344,7 @@ void ui_ScreenConfig_screen_init(void)
 
     // Drop Down for switching mode
     ui_DropdownConfigControlMode = lv_dropdown_create(ui_ScreenConfig);
-    lv_dropdown_set_options(ui_DropdownConfigControlMode, "None\nServo, Time\nRelay, Time\nI2C Servo, Time\nI2C Relay, Time\nI2C Servo, Ticks\nI2C Relay, Ticks");
+    lv_dropdown_set_options(ui_DropdownConfigControlMode, "None\nServo, Time\nRelay, Time\nRelay, Time, NFC\nI2C Servo, Time\nI2C Relay, Time\nI2C Servo, Ticks\nI2C Relay, Ticks");
     lv_obj_set_width(ui_DropdownConfigControlMode, 170);
     lv_obj_set_height(ui_DropdownConfigControlMode, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_DropdownConfigControlMode, -10);
