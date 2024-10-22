@@ -325,6 +325,7 @@ void tapOpen(int i) {
       sensact->writeServo(i);
       break;
     case CONTROL_MODE_RELAY_TIME:
+    case CONTROL_MODE_RELAY_TIME_NFC:
       sensact->relayHigh();
       break;
     case CONTROL_MODE_I2C_SERVO_TICKS:
@@ -350,6 +351,7 @@ void tapClose(int i) {
       sensact->writeServo(i);
       break;
     case CONTROL_MODE_RELAY_TIME:
+    case CONTROL_MODE_RELAY_TIME_NFC:
       sensact->relayLow();
       break;
     case CONTROL_MODE_I2C_SERVO_TICKS:
@@ -978,6 +980,12 @@ void setup()
       break;
     case CONTROL_MODE_RELAY_TIME:
       sensact->initRelay(TAP_SERVO_PIN);
+      break;
+    case CONTROL_MODE_RELAY_TIME_NFC:
+      sensact->initRelay(TAP_RELAY_PIN);
+      sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);
+      sensact->initNFC();
+      delay(1000);
       break;
     case CONTROL_MODE_I2C_SERVO_TIME:
       sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
