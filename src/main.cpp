@@ -14,7 +14,7 @@
 #include <tapconfig.h>
 #include <tapproduct.h>
 #include <productconfig.h>
-#include <Adafruit_PN532_NTAG424.h>
+// #include <Adafruit_PN532_NTAG424.h>
 #include <bitcoin.h>
 
 #define STR1(x)  #x
@@ -60,7 +60,6 @@ void doFirmwareUpdate();
 void hidePanelMainMessage();
 void hidePanelAboutMessage();
 void expireInvoice();
-void checkNFCPayment();
 void updateBeerTapProgress();
 void fromBeerToAboutPage();
 void fromMainToAboutPage();
@@ -76,7 +75,6 @@ Task expireInvoiceTask(TASK_IMMEDIATE, TASK_ONCE, &expireInvoice);
 Task fromBeerToAboutPageTask(TASK_IMMEDIATE, TASK_ONCE, &fromBeerToAboutPage);
 Task beerTapProgressTask(TASK_IMMEDIATE, TAPPROGRESS_STEPS, &updateBeerTapProgress);
 Task checkUpdateTask(TASK_SECOND, TASK_FOREVER, &doFirmwareUpdate);
-Task checkNFCPaymentTask(TASK_IMMEDIATE, TASK_FOREVER, &checkNFCPayment);
 Task checkInvoiceReceivedTask(TASK_IMMEDIATE, TASK_ONCE, &checkInvoiceReceived);
 
 #ifdef TEST
@@ -327,14 +325,6 @@ void tapOpen(int i) {
     case CONTROL_MODE_RELAY_TIME:
       sensact->relayHigh();
       break;
-    case CONTROL_MODE_I2C_SERVO_TICKS:
-    case CONTROL_MODE_I2C_SERVO_TIME:
-      sensact->writeI2CServo(i);
-      break;    
-    case CONTROL_MODE_I2C_RELAY_TICKS:
-    case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->relayI2CHigh();
-      break;    
     case CONTROL_MODE_NONE:
     default:
       return;
@@ -352,14 +342,6 @@ void tapClose(int i) {
     case CONTROL_MODE_RELAY_TIME:
       sensact->relayLow();
       break;
-    case CONTROL_MODE_I2C_SERVO_TICKS:
-    case CONTROL_MODE_I2C_SERVO_TIME:
-      sensact->writeI2CServo(i);
-      break;    
-    case CONTROL_MODE_I2C_RELAY_TICKS:
-    case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->relayI2CLow();
-      break;    
     case CONTROL_MODE_NONE:
     default:
       return;
@@ -469,10 +451,7 @@ void expireInvoice()
   Serial.println("[expireInvoice]");
 #endif
   expireInvoiceTask.disable();
-  if ( sensact->isNFCAvailable() ) {
-    checkNFCPaymentTask.disable();
-  }
-
+ 
   payment_pin = "";
   payment_hash = "";
   payment_request = "";  
@@ -485,10 +464,7 @@ void showInvoice(DynamicJsonDocument *doc)
 
   // Start countdown to expire invoice
   expireInvoiceTask.restartDelayed(TASK_SECOND * 120);
-  if ( sensact->isNFCAvailable() ) {
-    checkNFCPaymentTask.restart();
-  }
-
+ 
   // Update UI
   {
     const std::lock_guard<std::recursive_mutex> lock(lvgl_mutex);
@@ -725,10 +701,7 @@ void handlePaid(DynamicJsonDocument *doc) {
   payment_hash = "";
 
   expireInvoiceTask.disable();
-  if ( sensact->isNFCAvailable() ) {
-    checkNFCPaymentTask.disable();
-  }
-
+ 
   tap_duration = (*doc)["payload"].as<int>();
 
   {
@@ -862,7 +835,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           handlePaid(&doc);
         } else if ( strcmp(event,"paymentfailed") == 0 ) {
           setPanelMainMessage("PAYMENT FAILED",3);
-          checkNFCPaymentTask.restartDelayed(TASK_SECOND * 3);  
         } else {
 #ifdef DEBUG
           Serial.println(event);
@@ -878,51 +850,6 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   }
 }
 
-void nfcReadCallback(int statusCode ) {
-  switch ( statusCode ) {
-    case SENSACT_NFC_CB_INCOMPATIBLE:
-      setPanelMainMessage("INCOMPATIBLE CARD",3);
-      break;
-    case SENSACT_NFC_CB_NO_BYTES:
-      setPanelMainMessage("MOVE CARD",3);
-      break;
-    case SENSACT_NFC_CB_NO_NTAG424:
-      setPanelMainMessage("BAD CARD",3);
-      break;  
-    case SENSACT_NFC_CB_READING:
-    case SENSACT_NFC_CB_NTAG424:
-      setPanelMainMessage("READING CARD",1);
-      break;  
-    case SENSACT_NFC_CB_NOREAD:
-      //setPanelMainMessage("NOTHING READ",3);
-      break;
-    case SENSACT_NFC_CB_UNAVAILABLE:
-      setPanelMainMessage("NFC UNAVAILABLE",3);
-      break;    
-    case SENSACT_NFC_CB_READ_SUCCESS:
-      setPanelMainMessage("CARD READ",3);
-      break;
-  }
-}
-
-void nfcReadSucces(int len,const char *data ) {
-
-
-#ifdef DEBUG
-  Serial.printf("NFC read succes %d\n",len);
-#endif
-
-  String wsmessage = "{\"event\":\"lnurlw\",\"payment_request\":\"";
-  wsmessage += payment_request;
-  wsmessage += "\",\"lnurlw\":\"";
-  wsmessage += data;
-  wsmessage += "\"}";
-#ifdef DEBUG
-  Serial.println(wsmessage);
-#endif
-  webSocket.sendTXT(wsmessage);
-}
-
 void restartTap() {
   ESP.restart();
 }
@@ -935,7 +862,6 @@ void setup()
 
   // add tasks to task scheduler
   taskScheduler.addTask(checkWiFiTask);
-  taskScheduler.addTask(checkNFCPaymentTask);
   taskScheduler.addTask(checkUpdateTask);
   taskScheduler.addTask(hidePanelMainMessageTask);
   taskScheduler.addTask(hidePanelAboutMessageTask);
@@ -979,20 +905,6 @@ void setup()
     case CONTROL_MODE_RELAY_TIME:
       sensact->initRelay(TAP_SERVO_PIN);
       break;
-    case CONTROL_MODE_I2C_SERVO_TIME:
-      sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
-      sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
-      sensact->initI2CServo(TAP_I2C_SERVO_PIN);
-      sensact->initNFC();
-      delay(1000);
-      break;
-    case CONTROL_MODE_I2C_RELAY_TIME:
-      sensact->initI2C(TAP_I2C_SDA, TAP_I2C_SCL,TAP_I2C_BUS);    
-      sensact->initI2CExtender(TAP_I2C_TAP_ADDRESS);
-      sensact->initI2CRelay(TAP_I2C_RELAY_PIN);
-      sensact->initNFC();
-      delay(1000);
-      break;
     default:
       break;
   }
@@ -1020,10 +932,6 @@ void setup()
   testTask.restartDelayed(5000);
 #endif
 
-}
-
-void checkNFCPayment() {
-  sensact->readNFC(NFC_TIMEOUT,nfcReadCallback,nfcReadSucces);
 }
 
 bool httpsHostReachable(const char *hostname) {
